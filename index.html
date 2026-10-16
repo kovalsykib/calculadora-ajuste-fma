@@ -175,7 +175,7 @@ footer.foot{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line)
   <header class="top">
     <span class="eyebrow">Índice de perigo de incêndios florestais · avaliação e ajuste regional</span>
     <h1>Calculadora de Ajuste da FMA</h1>
-    <p class="lede">Carregue os dados meteorológicos diários e os registros de incêndio ou focos de calor da sua região. A calculadora gera a Fórmula de Monte Alegre, cruza com os dias de ocorrência, avalia o desempenho da escala original (skill score, porcentagem de sucesso, curva ROC) e, se ela não representar a realidade local, propõe uma escala ajustada, com validação independente opcional.</p>
+    <p class="lede">Carregue os dados meteorológicos horários e os registros de incêndio ou focos de calor da sua região. A calculadora gera a Fórmula de Monte Alegre, cruza com os dias de ocorrência, avalia o desempenho da escala original (skill score, porcentagem de sucesso, curva ROC) e, se ela não representar a realidade local, propõe uma escala ajustada, com validação independente opcional.</p>
     <div class="formula"><span><b>FMA</b> = Σ (100 / H<sub>i</sub>)</span><span class="muted">H = umidade relativa às 13 h (%) · soma reduzida ou reiniciada conforme a chuva do dia</span></div>
     <div class="danger-strip" aria-hidden="true"><span style="background:var(--c0)"></span><span style="background:var(--c1)"></span><span style="background:var(--c2)"></span><span style="background:var(--c3)"></span><span style="background:var(--c4)"></span></div>
     <p class="privacy"><i aria-hidden="true"></i>Os arquivos são processados no seu próprio navegador. Nenhum dado é enviado a servidores.</p>
@@ -187,7 +187,7 @@ footer.foot{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line)
     <div class="grid2">
       <div class="drop" id="dropMet">
         <div class="drop-top">
-          <div><h3>Dados meteorológicos</h3><p class="muted" style="font-size:.88rem">Data, umidade relativa (%) e precipitação (mm). Diário ou horário (ex.: INMET). Pode adicionar vários arquivos, um por ano.</p></div>
+          <div><h3>Dados meteorológicos</h3><p class="muted" style="font-size:.88rem">Dados horários: data, hora, umidade relativa (%) e precipitação (mm), como os das estações automáticas do INMET. Dados diários não são aceitos. Pode adicionar vários arquivos, um por ano.</p></div>
           <label class="btn small">Adicionar arquivos<input type="file" id="fileMet" accept=".csv,.txt,.xlsx,.xls,.ods" multiple></label>
         </div>
         <div class="file-name" id="nameMet">—</div>
@@ -322,7 +322,7 @@ footer.foot{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line)
     <summary>Método, fórmulas e formato das planilhas</summary>
     <div class="method-body">
       <p><b>FMA.</b> Somatório diário de 100/H, com H a umidade relativa às 13 h. Com as reduções ativadas, a chuva do dia modifica o acumulado: até 2,4 mm não altera; 2,5 a 4,9 mm reduz o valor do dia anterior em 30%; 5,0 a 9,9 mm em 60%; 10,0 a 12,9 mm em 80% (somando 100/H do dia); acima de 12,9 mm a FMA é zerada e a soma recomeça no dia seguinte. Sem as reduções, apenas a chuva acima de 12,9 mm reinicia o cálculo.</p>
-      <p><b>Falhas.</b> Não há preenchimento de falhas. Um dia sem UR das 13 h ou sem precipitação (vazio, “null” ou −9999) é desconsiderado, e a FMA dos dias seguintes também, porque o acumulado deixa de ser conhecido. O cálculo recomeça no primeiro dia com chuva acima de 12,9 mm, quando a FMA é zerada. O início da série segue a mesma regra: a FMA só começa a ser calculada após o primeiro dia com chuva acima de 12,9 mm. A umidade relativa usada é exclusivamente a das 13 h locais; em dados horários, só essa leitura é aproveitada, sem substituição por média diária ou por outro horário. A precipitação do dia é o acumulado das 14 h do dia anterior às 13 h do dia (horário local), coerente com a leitura de umidade das 13 h; em dados diários, usa-se o valor informado para o dia. Em dados horários, um dia com menos de 20 das 24 leituras horárias nessa janela (como o primeiro dia da série) é tratado como falha de precipitação. Arquivos do INMET (horários em UTC) e do BDQueimadas/INPE (data-hora em UTC) são reconhecidos e convertidos para o fuso horário local da região antes de agrupar por dia. O fuso é escolhido pelo estado informado no arquivo de focos (UTC−5 no Acre e no sudoeste do Amazonas; UTC−4 em AM, RR, RO, MT e MS; UTC−3 nos demais estados; UTC−2 em Fernando de Noronha) e pode ser alterado manualmente. Como os dados vêm em UTC, o horário de verão adotado até 2019 não interfere no cálculo.</p>
+      <p><b>Falhas.</b> Não há preenchimento de falhas. Um dia sem UR das 13 h ou sem precipitação (vazio, “null” ou −9999) é desconsiderado, e a FMA dos dias seguintes também, porque o acumulado deixa de ser conhecido. O cálculo recomeça no primeiro dia com chuva acima de 12,9 mm, quando a FMA é zerada. O início da série segue a mesma regra: a FMA só começa a ser calculada após o primeiro dia com chuva acima de 12,9 mm. São aceitos apenas dados meteorológicos horários, porque a FMA usa a umidade relativa das 13 h (nunca a média diária) e a precipitação acumulada do dia, obtida pela soma das leituras horárias. A umidade relativa usada é exclusivamente a leitura das 13 h locais, sem substituição por média diária ou por outro horário. A precipitação do dia é a soma das leituras horárias das 14 h do dia anterior às 13 h do dia (horário local), coerente com a leitura de umidade das 13 h. Um dia com menos de 20 das 24 leituras horárias nessa janela (como o primeiro dia da série) é tratado como falha de precipitação. Arquivos do INMET (horários em UTC) e do BDQueimadas/INPE (data-hora em UTC) são reconhecidos e convertidos para o fuso horário local da região antes de agrupar por dia. O fuso é escolhido pelo estado informado no arquivo de focos (UTC−5 no Acre e no sudoeste do Amazonas; UTC−4 em AM, RR, RO, MT e MS; UTC−3 nos demais estados; UTC−2 em Fernando de Noronha) e pode ser alterado manualmente. Como os dados vêm em UTC, o horário de verão adotado até 2019 não interfere no cálculo.</p>
       <p><b>Descarte de anos.</b> Um ano com mais de 10% dos dias sem FMA (falhas e dias aguardando reinício; cerca de 37 dias) é descartado inteiro, porque lacunas longas, sobretudo na estação seca, distorcem a distribuição dos dias por classe. O limite pode ser alterado. Os dias com incêndio que caem em dias sem FMA ficam fora da análise. O período mínimo de 5 anos é contado sobre os dias com FMA calculada.</p>
       <p><b>Dia com incêndio.</b> Dia com número de ocorrências (ou focos) igual ou maior que o limite escolhido, dentro do período dos dados meteorológicos.</p>
       <p><b>Tabela de contingência.</b> Nulo e Pequeno indicam “sem incêndio”; Médio, Alto e Muito alto indicam “com incêndio”. a = previsto e ocorreu, b = previsto e não ocorreu, c = não previsto e ocorreu, d = não previsto e não ocorreu, N = a + b + c + d.</p>
@@ -335,10 +335,11 @@ footer.foot{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line)
       <p><b>Validação independente</b> (Wilks, 2011; Santos et al., 2021). Em “Uso dos dados”, escolhe-se entre usar somente calibração (100% dos dados) ou calibração com os 75% iniciais e validação com os 25% finais, em ordem cronológica. Na segunda opção, a avaliação da escala original e o ajuste usam só a calibração, e a escala ajustada é testada nos dados de validação, que ela não viu. A validação exige cerca de 8 anos de dias com FMA calculada (5 de calibração e 2 de validação); com menos, só a calibração com 100% dos dados fica disponível.</p>
       <p><b>Arquivos aceitos diretamente.</b> CSV horário do INMET (com as linhas de cabeçalho da estação, colunas “Data Medicao”, “Hora Medicao”, precipitação e umidade relativa horárias; valores “null” são tratados como falha) e CSV do BDQueimadas/INPE (coluna “DataHora”, um foco por linha). Ao usar focos de um município, use dados meteorológicos de uma estação próxima.</p>
       <p><b>Vários arquivos.</b> Cada campo aceita vários arquivos ao mesmo tempo (por exemplo, um download por ano do BDQueimadas, que limita cada consulta a 366 dias, ou um arquivo anual do INMET). Os arquivos são combinados numa única série; linhas idênticas repetidas em arquivos que se sobrepõem são removidas, e leituras meteorológicas com a mesma data e hora são contadas uma única vez. Os arquivos devem ter as mesmas colunas.</p>
-      <p><b>Outros formatos</b> (CSV com ; ou , e cabeçalho; também aceita .xlsx):</p>
-      <pre class="tpl">data;UR_13h;precipitacao_mm
-01/01/2020;72;0
-02/01/2020;65,5;3,2</pre>
+      <p><b>Outros formatos</b> (CSV com ; ou , e cabeçalho; também aceita .xlsx). Dados meteorológicos sempre horários, uma linha por hora, no horário local ou em UTC (marque a conversão):</p>
+      <pre class="tpl">data;hora;precipitacao_mm;umidade_relativa
+2020-01-01;1200;0;68
+2020-01-01;1300;0,4;64
+2020-01-01;1400;0;61</pre>
       <pre class="tpl">datahora;satelite
 2020/08/14 17:20:00;AQUA_M-T
 2020/08/14 17:20:00;AQUA_M-T</pre>
@@ -416,7 +417,7 @@ function buildDaily(rows,map,urHour){
     o.n++; const p=parseNum(r[map.pp]), u=parseNum(r[map.ur]);
     if(!isNaN(u)){ o.u.push(u); if(!isNaN(h)&&h===urHour) o.uh.push(u); }
     by.set(t,o);
-    // chuva do dia: das 14 h do dia anterior às 13 h do dia (leituras horárias); dado diário fica no próprio dia
+    // chuva do dia: soma das leituras horárias das 14 h do dia anterior às 13 h do dia
     const tp=(!isNaN(h)&&h>=14)?t+DAY:t;
     const op=by.get(tp)||{p:[],u:[],uh:[],n:0,pw:0};
     op.pw++; if(!isNaN(p)) op.p.push(p);
@@ -589,24 +590,34 @@ function quadFit(y){
 }
 
 // dados de exemplo fictícios (gerador com semente)
+// dados de exemplo fictícios, horários no formato do INMET (hora UTC) + focos em UTC
 function sampleData(){
   let s=20240917; const rnd=()=>{s=(s*1664525+1013904223)%4294967296; return s/4294967296;};
   const gauss=()=>{let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);};
-  const met=[], foc=[]; let prev=0;
+  const H=3600000, pad=n=>String(n).padStart(2,"0"), num=v=>String(v).replace(".",",");
+  const shape=h=>(1-Math.cos(2*Math.PI*(h-14)/24))/2, s13=shape(13);
+  const met=[], foc=[]; let prev=0, rainPrev=0;
   for(let t=Date.UTC(2014,0,1); t<=Date.UTC(2023,11,31); t+=DAY){
     const d=new Date(t), doy=(t-Date.UTC(d.getUTCFullYear(),0,1))/DAY;
     const season=Math.cos(2*Math.PI*(doy-15)/365);
     let ur=Math.round(60+13*season+gauss()*11); ur=Math.min(98,Math.max(18,ur));
-    const pr=0.22+0.16*season; let pp=0;
-    if(rnd()<pr) pp=Math.round(-Math.log(1-rnd())*13*10)/10;
-    const key=String(d.getUTCDate()).padStart(2,"0")+"/"+String(d.getUTCMonth()+1).padStart(2,"0")+"/"+d.getUTCFullYear();
-    const gap=(d.getUTCFullYear()===2017&&doy>=160&&doy<200)||rnd()<0.004;
-    met.push({data:key,UR_13h:gap?"":ur,precipitacao_mm:pp});
+    const pr=0.22+0.16*season; let R=0;
+    if(rnd()<pr) R=Math.round(-Math.log(1-rnd())*13*10)/10;
+    const longGap=d.getUTCFullYear()===2017&&doy>=160&&doy<200, miss13=rnd()<0.004;
+    const rainH={15:Math.round(R*0.5*10)/10,16:Math.round(R*0.3*10)/10}; rainH[17]=Math.round((R-rainH[15]-rainH[16])*10)/10;
+    for(let h=0;h<24;h++){
+      const u=Math.round(Math.min(100,Math.max(8,ur+35*(shape(h)-s13))));
+      const tu=new Date(t+(h+3)*H); // horário local UTC−3 → UTC
+      const gapRow=longGap||(miss13&&h===13);
+      met.push({"Data Medicao":tu.getUTCFullYear()+"-"+pad(tu.getUTCMonth()+1)+"-"+pad(tu.getUTCDate()),"Hora Medicao":pad(tu.getUTCHours())+"00",
+        "PRECIPITACAO TOTAL, HORARIO(mm)":longGap?"null":num(rainH[h]||0),"UMIDADE RELATIVA DO AR, HORARIA(%)":gapRow?"null":u});
+    }
+    const pp=rainPrev; rainPrev=R; // chuva das 14 h de ontem às 13 h de hoje
     const inc=100/ur; let f;
     if(pp>12.9)f=0; else if(pp<=2.4)f=prev+inc; else if(pp<=4.9)f=prev*.7+inc; else if(pp<=9.9)f=prev*.4+inc; else f=prev*.2+inc; prev=f;
     const pf=0.01+0.45/(1+Math.exp(-(f-24)/6));
-    if(rnd()<pf){ const n=1+Math.floor(rnd()*4); const ymd=d.getUTCFullYear()+"/"+String(d.getUTCMonth()+1).padStart(2,"0")+"/"+String(d.getUTCDate()).padStart(2,"0");
-      for(let i=0;i<n;i++) foc.push({datahora:ymd+" 17:"+String(Math.floor(rnd()*60)).padStart(2,"0")+":00",satelite:rnd()<.5?"AQUA_M-T":"NOAA-20"}); }
+    if(rnd()<pf){ const n=1+Math.floor(rnd()*4); const ymd=d.getUTCFullYear()+"/"+pad(d.getUTCMonth()+1)+"/"+pad(d.getUTCDate());
+      for(let i=0;i<n;i++) foc.push({DataHora:ymd+" 17:"+pad(Math.floor(rnd()*60))+":00",Satelite:rnd()<.5?"AQUA_M-T":"NOAA-20"}); }
   }
   return {met,foc};
 }
@@ -753,7 +764,7 @@ for(const [id,kind] of [["dropMet","met"],["dropFoc","foc"]]){
 function loadSample(){
   const s=sampleData();
   state.sample=true;
-  state.files={met:[{name:"exemplo_meteorologia.csv",data:{cols:["data","UR_13h","precipitacao_mm"],rows:s.met}}],foc:[{name:"exemplo_focos.csv",data:{cols:["datahora","satelite"],rows:s.foc}}]};
+  state.files={met:[{name:"exemplo_INMET_horario.csv",data:{cols:["Data Medicao","Hora Medicao","PRECIPITACAO TOTAL, HORARIO(mm)","UMIDADE RELATIVA DO AR, HORARIA(%)"],rows:s.met,preamble:"Nome: EXEMPLO\nCodigo Estacao: X000\nPeriodicidade da Medicao: Horaria"}}],foc:[{name:"exemplo_bdqueimadas.csv",data:{cols:["DataHora","Satelite"],rows:s.foc}}]};
   applyFiles("met"); applyFiles("foc");
   $("tzOff").value="-3";
   state.sample=true; $("sampleBadge").hidden=false; state.showVal=false; run(true);
@@ -833,8 +844,13 @@ function run(reAuto){
   if(!state.met||!state.foc){ lockResults(true,!state.met&&!state.foc?"Carregue os dados meteorológicos e as ocorrências de incêndio da região.":!state.met?"Carregue os dados meteorológicos da mesma região e período das ocorrências.":"Carregue as ocorrências de incêndio (focos de calor) da mesma região e período dos dados meteorológicos."); $("dataSummary").innerHTML=""; state.Pc=null; return; }
   const map={date:$("mDate").value,ur:$("mUR").value,pp:$("mPP").value,hour:$("mHour").value,utc:$("metUTC").checked,off:+$("tzOff").value};
   { const off=+$("tzOff").value, h=+$("urHour").value; $("metNote").textContent=`O INMET publica a hora em UTC. Com a conversão para UTC${off<0?"−":"+"}${Math.abs(off)}, a UR das ${h} h locais é a leitura das ${((h-off)%24+24)%24} UTC e a chuva do dia é o acumulado das 14 h do dia anterior às 13 h locais.`; }
-  $("hourOpts").hidden=!map.hour && !state.met.rows.slice(0,50).some(r=>!isNaN(hourFromDate(r[map.date])));
+  $("hourOpts").hidden=false;
   const daily=buildDaily(state.met.rows,map,+$("urHour").value);
+  if(daily.days.length && !daily.hourly){
+    lockResults(true,"A planilha meteorológica não é horária. A FMA usa a umidade relativa das 13 h e a precipitação acumulada do dia, obtida pela soma das leituras horárias; por isso só são aceitos dados horários (uma linha por hora, com data, hora, umidade relativa e precipitação), como os das estações automáticas do INMET. Dados diários ou com umidade média não são aceitos.");
+    $("dataSummary").innerHTML=""; $("dataAlert").innerHTML=`<div class="alert bad">Dados meteorológicos diários não são aceitos. Carregue os dados horários da estação.</div>`;
+    $("yearBox").hidden=true; state.Pc=null; return;
+  }
   if(daily.noHour){
     lockResults(true,`A planilha meteorológica é horária, mas não tem leituras de umidade relativa às 13 h locais (${(13-(+$("tzOff").value))%24} UTC no fuso escolhido). A FMA usa exclusivamente a UR das 13 h locais e não há substituição por média diária ou por outro horário. Estações convencionais do INMET (leituras às 00, 12 e 18 UTC) não atendem a esse requisito; use uma estação automática.`);
     $("dataSummary").innerHTML=""; $("dataAlert").innerHTML=`<div class="alert bad">Sem leituras de UR às 13 h locais. Confira a coluna de hora, o fuso horário e a opção “Horários em UTC”.</div>`;
@@ -992,7 +1008,7 @@ $("btnCopySeries").addEventListener("click",()=>{ if(!state.days)return;
   const SIT={ok:"analisado",falha:"falha (sem UR ou chuva)",reinicio:"aguardando reinício da FMA",ano:"ano descartado"};
   for(const d of state.days){ const ok=!isNaN(d.fma); s+=[dBR(d.key),isNaN(d.ur)?"":fmt(d.ur,1),isNaN(d.pp)?"":fmt(d.pp,1),ok?fmt(d.fma,2):"",ok?CLASSES[classOf(d.fma,ORIGINAL)]:"",ok?CLASSES[classOf(d.fma,state.adj)]:"",d.focos,d.fire?"sim":"não",d.status!=="ok"?"":(d.part||""),SIT[d.status]].join("\t")+"\n"; }
   copy(s,`Série de ${state.days.length} dias copiada`); });
-$("btnTplMet").addEventListener("click",()=>copy("data;UR_13h;precipitacao_mm\n01/01/2020;72;0\n02/01/2020;65,5;3,2\n","Modelo copiado"));
+$("btnTplMet").addEventListener("click",()=>copy("data;hora;precipitacao_mm;umidade_relativa\n2020-01-01;1200;0;68\n2020-01-01;1300;0,4;64\n2020-01-01;1400;0;61\n","Modelo copiado"));
 $("btnTplFoc").addEventListener("click",()=>copy("datahora;satelite\n2020/08/14 17:20:00;AQUA_M-T\n","Modelo copiado"));
 
 renderScales();
