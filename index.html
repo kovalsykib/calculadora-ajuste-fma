@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Calculadora de Ajuste da FMA</title>
+<meta name="description" content="Avalie e ajuste a Fórmula de Monte Alegre (FMA) para a sua região">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: ferramenta em três etapas empilhadas (dados → escala → resultados), comparação Original × Ajustada lado a lado */
+:root{
+  --bg:#f3f5f1; --surface:#ffffff; --sunk:#e8ece5; --line:#d3d9cf;
+  --ink:#18241d; --muted:#5b685f; --accent:#c2410c; --accent-ink:#ffffff; --orig:#6f8577;
+  --ok:#2f7d4a; --ok-bg:#e2f1e6; --warn:#a15c07; --warn-bg:#fbeed6; --bad:#b42318; --bad-bg:#fbe4e1;
+  --c0:#3a77b8; --c1:#3f9b52; --c2:#d6a700; --c3:#e0711b; --c4:#c62a20;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121a15; --surface:#19231d; --sunk:#0e1511; --line:#2c3a31;
+  --ink:#e6ece7; --muted:#9aa89e; --accent:#f07a3c; --accent-ink:#1a0d05; --orig:#8ea596;
+  --ok:#6fcf8c; --ok-bg:#16301f; --warn:#f0b04f; --warn-bg:#33260e; --bad:#ff8a7d; --bad-bg:#3a1714;
+  --c0:#6aa6e6; --c1:#6cc47d; --c2:#f0c93a; --c3:#f59a4e; --c4:#f0645a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121a15; --surface:#19231d; --sunk:#0e1511; --line:#2c3a31;
+  --ink:#e6ece7; --muted:#9aa89e; --accent:#f07a3c; --accent-ink:#1a0d05; --orig:#8ea596;
+  --ok:#6fcf8c; --ok-bg:#16301f; --warn:#f0b04f; --warn-bg:#33260e; --bad:#ff8a7d; --bad-bg:#3a1714;
+  --c0:#6aa6e6; --c1:#6cc47d; --c2:#f0c93a; --c3:#f59a4e; --c4:#f0645a; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:28px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(1.7rem,3.6vw,2.5rem);font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.35rem;font-weight:700}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+header.top{display:grid;gap:12px}
+.lede{max-width:70ch;color:var(--muted)}
+.formula{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline;font-family:var(--f-mono);font-size:.9rem;color:var(--ink)}
+.formula b{font-weight:600;color:var(--accent)}
+.danger-strip{display:flex;height:6px;border-radius:3px;overflow:hidden;max-width:420px}
+.danger-strip span{flex:1}
+
+section.step{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:22px;display:grid;gap:18px}
+.step-head{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+.step-n{font-family:var(--f-display);font-weight:700;font-size:1rem;color:var(--accent-ink);background:var(--accent);border-radius:50%;width:30px;height:30px;display:grid;place-items:center;flex:none;align-self:center}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:18px}
+.grid2>*{min-width:0}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:16px;display:grid;gap:12px;background:var(--sunk);transition:border-color .15s}
+.drop.over{border-color:var(--accent)}
+.drop-top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.opts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px 20px;align-items:start}
+.opts-grid>*{min-width:0}
+.opts-grid .narrow{width:90px}
+.opts-grid .row{flex-wrap:nowrap}
+.val-cta{display:flex;gap:12px 24px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--sunk);border-radius:8px;padding:14px 16px}
+.val-cta b{color:var(--ink);font-family:var(--f-mono);font-weight:600}
+.report-box{display:flex;gap:16px 24px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
+.flist{display:flex;flex-wrap:wrap;gap:6px}
+.fchip{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:.78rem;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:2px 4px 2px 10px;max-width:100%;min-width:0}
+.fchip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fchip button{font:inherit;font-size:.9rem;line-height:1;border:0;background:transparent;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:99px}
+.fchip button:hover{color:var(--bad);background:var(--bad-bg)}
+.ftot{font-size:.82rem;color:var(--muted);width:100%}
+.file-name{font-family:var(--f-mono);font-size:.85rem;word-break:break-all}
+.badge{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:99px;background:var(--warn-bg);color:var(--warn)}
+.badge.ok{background:var(--ok-bg);color:var(--ok)}
+.badge.bad{background:var(--bad-bg);color:var(--bad)}
+
+label.f{display:grid;gap:4px;font-size:.85rem;color:var(--muted);font-weight:600}
+.maps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+select,input[type=number]{font:inherit;font-size:.95rem;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+input[type=number]{font-family:var(--f-mono)}
+select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{font:inherit;font-weight:700;font-size:.95rem;border-radius:6px;padding:8px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{font-size:.82rem;padding:5px 10px}
+.btn input{display:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.opts{display:flex;gap:14px 26px;flex-wrap:wrap;align-items:end}
+.opts label.chk{display:flex;gap:8px;align-items:center;font-size:.92rem}
+.opts .narrow{width:110px}
+.summary{font-size:.9rem;color:var(--muted)}
+.summary b{color:var(--ink);font-family:var(--f-mono);font-weight:600}
+.alert{padding:10px 14px;border-radius:8px;font-size:.92rem}
+.alert.warn{background:var(--warn-bg);color:var(--warn)}
+.alert.bad{background:var(--bad-bg);color:var(--bad)}
+
+/* escala */
+.scales{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:18px}
+.scales>*{min-width:0}
+.scale-card{border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:12px}
+.scale-card.adj{border-color:var(--accent)}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+th:first-child,td:first-child{text-align:left}
+td.num{font-size:.85rem}
+.tw{overflow-x:auto}
+.cls{display:inline-flex;gap:8px;align-items:center}
+.cls i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.thr input{width:84px;padding:4px 6px}
+.presets{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:.85rem}
+
+/* resultados */
+.verdict{border-radius:10px;padding:18px 20px;display:grid;gap:8px;border:1px solid var(--line);background:var(--surface)}
+.verdict.ok{background:var(--ok-bg);border-color:transparent}
+.verdict.bad{background:var(--bad-bg);border-color:transparent}
+.verdict h2{font-size:1.25rem}
+.verdict.ok h2{color:var(--ok)} .verdict.bad h2{color:var(--bad)}
+.checks{display:grid;gap:4px;font-size:.92rem;margin:0;padding:0;list-style:none}
+.checks li{display:flex;gap:8px}
+.checks .mk{font-weight:700;width:1.2em;flex:none}
+.mk.y{color:var(--ok)} .mk.n{color:var(--bad)}
+
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px}
+.mcard{display:grid;gap:14px;border:1px solid var(--line);border-radius:8px;padding:16px;background:var(--surface)}
+.mcard.adj{border-color:var(--accent)}
+.kv{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.kv div{display:grid;gap:2px}
+.kv .big{font-family:var(--f-mono);font-size:1.7rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.delta{font-family:var(--f-mono);font-size:.8rem}
+.delta.up{color:var(--ok)} .delta.down{color:var(--bad)}
+.cont{display:grid;grid-template-columns:auto 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden;font-size:.82rem}
+.cont>div{background:var(--surface);padding:6px 8px;text-align:center}
+.cont .h{background:var(--sunk);font-weight:700;color:var(--muted)}
+.cont .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:18px}
+.charts>*{min-width:0}
+.chart-card{border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:10px;background:var(--surface)}
+.chart-box{position:relative;height:300px}
+.fit{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);display:grid;gap:2px}
+
+details.method{font-size:.93rem}
+details.method summary{cursor:pointer;font-weight:700;font-family:var(--f-display)}
+.method-body{display:grid;gap:10px;margin-top:12px;max-width:80ch;color:var(--muted)}
+.method-body b{color:var(--ink)}
+pre.tpl{font-family:var(--f-mono);font-size:.8rem;background:var(--sunk);padding:10px;border-radius:6px;overflow-x:auto;margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:6px;font-size:.9rem;font-weight:600}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:.85rem;font-weight:700;padding:5px 12px;border:0;background:var(--surface);color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.kv4{grid-template-columns:repeat(4,1fr)}
+@media (max-width:520px){.kv4{grid-template-columns:repeat(2,1fr)}}
+.kv .mid{font-family:var(--f-mono);font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
+.privacy{font-size:.85rem;color:var(--muted);display:flex;gap:8px;align-items:center}
+.privacy i{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.refs{font-size:.85rem;color:var(--muted);display:grid;gap:6px;padding-left:1.2em;margin:0}
+.refs a{color:var(--ink)}
+.val-head{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+td.y{color:var(--ok);font-weight:700} td.n{color:var(--bad);font-weight:700}
+.busy{opacity:.55;pointer-events:none}
+footer.foot{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Índice de perigo de incêndios florestais · avaliação e ajuste regional</span>
+    <h1>Calculadora de Ajuste da FMA</h1>
+    <p class="lede">Carregue os dados meteorológicos diários e os registros de incêndio ou focos de calor da sua região. A calculadora gera a Fórmula de Monte Alegre, cruza com os dias de ocorrência, avalia o desempenho da escala original (skill score, porcentagem de sucesso, curva ROC) e, se ela não representar a realidade local, propõe uma escala ajustada, com validação independente opcional.</p>
+    <div class="formula"><span><b>FMA</b> = Σ (100 / H<sub>i</sub>)</span><span class="muted">H = umidade relativa às 13 h (%) · soma reduzida ou reiniciada conforme a chuva do dia</span></div>
+    <div class="danger-strip" aria-hidden="true"><span style="background:var(--c0)"></span><span style="background:var(--c1)"></span><span style="background:var(--c2)"></span><span style="background:var(--c3)"></span><span style="background:var(--c4)"></span></div>
+    <p class="privacy"><i aria-hidden="true"></i>Os arquivos são processados no seu próprio navegador. Nenhum dado é enviado a servidores.</p>
+  </header>
+
+  <!-- ETAPA 1 -->
+  <section class="step" id="step1">
+    <div class="step-head"><span class="step-n">1</span><h2>Dados da região</h2><span id="sampleBadge" class="badge">Dados de exemplo fictícios</span></div>
+    <div class="grid2">
+      <div class="drop" id="dropMet">
+        <div class="drop-top">
+          <div><h3>Dados meteorológicos</h3><p class="muted" style="font-size:.88rem">Data, umidade relativa (%) e precipitação (mm). Diário ou horário (ex.: INMET). Pode adicionar vários arquivos, um por ano.</p></div>
+          <label class="btn small">Adicionar arquivos<input type="file" id="fileMet" accept=".csv,.txt,.xlsx,.xls,.ods" multiple></label>
+        </div>
+        <div class="file-name" id="nameMet">—</div>
+        <div class="maps">
+          <label class="f">Data<select id="mDate"></select></label>
+          <label class="f">Umidade relativa<select id="mUR"></select></label>
+          <label class="f">Precipitação<select id="mPP"></select></label>
+          <label class="f">Hora (se horário)<select id="mHour"></select></label>
+        </div>
+        <div class="opts" id="hourOpts">
+          <div class="f" style="display:grid;gap:4px;font-size:.85rem;color:var(--muted);font-weight:600"><span>Leitura de UR usada</span><b style="color:var(--ink);font-family:var(--f-mono);font-weight:600">13 h (horário local)</b><input type="hidden" id="urHour" value="13"></div>
+          <label class="chk"><input type="checkbox" id="metUTC"> Horários em UTC (converter para o fuso local)</label>
+          <p class="muted" style="font-size:.82rem;max-width:40ch" id="metNote"></p>
+        </div>
+      </div>
+      <div class="drop" id="dropFoc">
+        <div class="drop-top">
+          <div><h3>Ocorrências de incêndio</h3><p class="muted" style="font-size:.88rem">Focos de calor (uma linha por foco, ex.: BDQueimadas) ou registros de ocorrência; também aceita uma linha por dia com a contagem. O BDQueimadas limita cada download a 366 dias: adicione todos os arquivos do período.</p></div>
+          <label class="btn small">Adicionar arquivos<input type="file" id="fileFoc" accept=".csv,.txt,.xlsx,.xls,.ods" multiple></label>
+        </div>
+        <div class="file-name" id="nameFoc">—</div>
+        <div class="maps">
+          <label class="f">Data / data-hora<select id="fDate"></select></label>
+          <label class="f">Nº de ocorrências (opcional)<select id="fCount"></select></label>
+        </div>
+        <label class="chk" style="display:flex;gap:8px;align-items:center;font-size:.88rem"><input type="checkbox" id="focUTC"> Horários em UTC (converter para o fuso local)</label>
+      </div>
+    </div>
+    <div class="opts-grid">
+      <label class="f">Fuso horário da região<select id="tzOff">
+        <option value="-2">UTC−2 · Fernando de Noronha</option>
+        <option value="-3" selected>UTC−3 · Brasília (maior parte do país)</option>
+        <option value="-4">UTC−4 · AM, RR, RO, MT e MS</option>
+        <option value="-5">UTC−5 · Acre e sudoeste do AM</option>
+      </select></label>
+      <label class="f">Uso dos dados<select id="optSplit">
+        <option value="split" selected>Calibração (75%) + validação (25%)</option>
+        <option value="all">Somente calibração (100% dos dados)</option>
+      </select><span id="splitNote" style="font-weight:400;font-size:.8rem"></span></label>
+      <label class="f">Precipitação<span class="chk" style="display:flex;gap:8px;align-items:center;font-weight:400;color:var(--ink);font-size:.92rem;min-height:36px"><input type="checkbox" id="optRed" checked> Aplicar reduções por chuva (Soares, 1972)</span></label>
+      <label class="f">Descartar o ano com mais de<span class="row"><input type="number" id="optMaxGap" class="narrow" value="10" min="0" max="100" step="1"> <span class="muted" style="font-weight:400">% dos dias sem FMA</span></span></label>
+      <label class="f">Dia com incêndio a partir de<span class="row"><input type="number" id="optMin" class="narrow" value="1" min="1" step="1"> <span class="muted" style="font-weight:400">ocorrência(s)</span></span></label>
+    </div>
+    <div id="dataSummary" class="summary"></div>
+    <details id="yearBox" class="method" hidden><summary>Qualidade da série por ano</summary>
+      <div class="tw" style="margin-top:10px"><table id="tYears"></table></div>
+      <p class="muted" style="font-size:.82rem;margin-top:8px">Dias sem FMA = dias com falha de UR ou chuva + dias seguintes até a FMA ser reiniciada por chuva acima de 12,9 mm.</p>
+    </details>
+    <div id="dataAlert"></div>
+  </section>
+
+  <!-- ETAPA 2 -->
+  <section class="step" id="step2">
+    <div class="step-head"><span class="step-n">2</span><h2>Escalas de perigo</h2></div>
+    <div class="scales">
+      <div class="scale-card">
+        <div class="row" style="justify-content:space-between"><h3>FMA original</h3><span class="muted" style="font-size:.85rem">Soares (1972)</span></div>
+        <div class="tw"><table id="tOrigScale"></table></div>
+        <div style="display:grid;gap:10px;border-top:1px solid var(--line);padding-top:12px">
+          <h3 style="font-size:.95rem">Critérios de avaliação e ajuste</h3>
+          <label class="f">Premissa da distribuição dos dias<select id="optMode">
+            <option value="peak">Maior frequência em Médio, decrescendo para os extremos (Tetto, 2012)</option>
+            <option value="decr">Número de dias decrescente com a classe de perigo (Nunes et al., 2010)</option>
+          </select></label>
+          <label class="chk" style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" id="optCut" checked> Ponto de corte do índice de união (ROC) dentro da classe Médio (Santos et al., 2021)</label>
+          <label class="chk" style="display:flex;gap:8px;align-items:center;font-size:.9rem"><input type="checkbox" id="optKeepNulo" checked> Manter Nulo ≤ 1,0</label>
+        </div>
+      </div>
+      <div class="scale-card adj">
+        <div class="row" style="justify-content:space-between"><h3>FMA ajustada</h3><button class="btn primary small" id="btnAuto">Ajustar automaticamente</button></div>
+        <div class="tw"><table id="tAdjScale"></table></div>
+        <div class="presets">
+          <button class="btn small" data-preset="1,3,8,20" title="Soares (1972)">Voltar à escala original</button>
+        </div>
+        <p id="autoNote" class="muted" style="font-size:.88rem"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ETAPA 3 -->
+  <section class="step" id="step3">
+    <div class="step-head"><span class="step-n">3</span><h2>Desempenho e diagnóstico</h2><span id="periodLabel" class="muted" style="font-size:.9rem"></span></div>
+    <div id="lockMsg" class="alert bad" hidden></div>
+    <div id="verdict"></div>
+    <div class="metrics" id="metrics"></div>
+
+    <div id="valBlock" hidden style="display:grid;gap:10px">
+      <div class="val-head"><h3>Validação com dados independentes</h3><span id="valPeriod" class="muted" style="font-size:.88rem"></span></div>
+      <div class="tw"><table id="tVal"></table></div>
+    </div>
+
+    <div class="val-head" id="segWrap" hidden>
+      <span class="muted" style="font-size:.9rem">Gráficos e tabela por classe:</span>
+      <div class="seg" role="group" aria-label="Período dos gráficos"><button id="segCal" aria-pressed="true">Calibração</button><button id="segVal" aria-pressed="false">Validação</button></div>
+    </div>
+    <div class="charts">
+      <div class="chart-card">
+        <h3>Número de dias por classe de perigo</h3>
+        <p class="muted" style="font-size:.85rem" id="noteDays"></p>
+        <div class="chart-box"><canvas id="chDays" aria-label="Porcentagem de dias por classe de perigo"></canvas></div>
+        <div class="fit" id="fitDays"></div>
+      </div>
+      <div class="chart-card">
+        <h3>Dias com ocorrência de incêndio por classe</h3>
+        <p class="muted" style="font-size:.85rem">Esperado: quanto maior a classe, maior a porcentagem dos dias com incêndio.</p>
+        <div class="chart-box"><canvas id="chFire" aria-label="Porcentagem dos dias de incêndio por classe de perigo"></canvas></div>
+        <div class="fit" id="fitFire"></div>
+      </div>
+      <div class="chart-card">
+        <h3>Curva ROC da FMA</h3>
+        <p class="muted" style="font-size:.85rem">Capacidade da FMA, como valor contínuo, de separar dias com e sem incêndio. O ponto de corte ótimo é o que minimiza o índice de união.</p>
+        <div class="chart-box"><canvas id="chRoc" aria-label="Curva ROC"></canvas></div>
+        <div class="fit" id="rocTxt"></div>
+      </div>
+      <div class="chart-card" style="align-content:start">
+        <div class="row" style="justify-content:space-between"><h3>Tabela por classe</h3><button class="btn small" id="btnCopyTable">Copiar tabela</button></div>
+        <div class="tw"><table id="tClasses"></table></div>
+        <div class="row" style="margin-top:6px"><button class="btn small" id="btnCopySeries">Copiar série diária</button><button class="btn small" id="btnCopyMetrics">Copiar indicadores</button></div>
+        <p class="muted" style="font-size:.82rem">Os botões copiam em formato de tabela para colar direto no Excel ou no Calc.</p>
+      </div>
+    </div>
+    <div class="report-box" id="reportBox">
+      <div style="display:grid;gap:4px;min-width:0">
+        <h3>Relatório e dados</h3>
+        <p class="muted" style="font-size:.9rem">O relatório em Word (.docx) traz os dados usados, a metodologia, as escalas, os indicadores, as tabelas e os gráficos. A planilha Excel (.xlsx) traz a série diária: data, UR das 13 h, chuva das 14 h às 13 h, FMA, classe na escala original e na ajustada e presença de foco. Ambos usam a escala ajustada que estiver na tela.</p>
+      </div>
+      <div class="row"><button class="btn primary" id="btnReport">Gerar relatório em Word</button><button class="btn" id="btnXlsx">Baixar planilha Excel</button><span id="reportStatus" class="muted" style="font-size:.88rem" role="status"></span></div>
+    </div>
+  </section>
+
+  <details class="method">
+    <summary>Método, fórmulas e formato das planilhas</summary>
+    <div class="method-body">
+      <p><b>FMA.</b> Somatório diário de 100/H, com H a umidade relativa às 13 h. Com as reduções ativadas, a chuva do dia modifica o acumulado: até 2,4 mm não altera; 2,5 a 4,9 mm reduz o valor do dia anterior em 30%; 5,0 a 9,9 mm em 60%; 10,0 a 12,9 mm em 80% (somando 100/H do dia); acima de 12,9 mm a FMA é zerada e a soma recomeça no dia seguinte. Sem as reduções, apenas a chuva acima de 12,9 mm reinicia o cálculo.</p>
+      <p><b>Falhas.</b> Não há preenchimento de falhas. Um dia sem UR das 13 h ou sem precipitação (vazio, “null” ou −9999) é desconsiderado, e a FMA dos dias seguintes também, porque o acumulado deixa de ser conhecido. O cálculo recomeça no primeiro dia com chuva acima de 12,9 mm, quando a FMA é zerada. O início da série segue a mesma regra: a FMA só começa a ser calculada após o primeiro dia com chuva acima de 12,9 mm. A umidade relativa usada é exclusivamente a das 13 h locais; em dados horários, só essa leitura é aproveitada, sem substituição por média diária ou por outro horário. A precipitação do dia é o acumulado das 14 h do dia anterior às 13 h do dia (horário local), coerente com a leitura de umidade das 13 h; em dados diários, usa-se o valor informado para o dia. Em dados horários, um dia com menos de 20 das 24 leituras horárias nessa janela (como o primeiro dia da série) é tratado como falha de precipitação. Arquivos do INMET (horários em UTC) e do BDQueimadas/INPE (data-hora em UTC) são reconhecidos e convertidos para o fuso horário local da região antes de agrupar por dia. O fuso é escolhido pelo estado informado no arquivo de focos (UTC−5 no Acre e no sudoeste do Amazonas; UTC−4 em AM, RR, RO, MT e MS; UTC−3 nos demais estados; UTC−2 em Fernando de Noronha) e pode ser alterado manualmente. Como os dados vêm em UTC, o horário de verão adotado até 2019 não interfere no cálculo.</p>
+      <p><b>Descarte de anos.</b> Um ano com mais de 10% dos dias sem FMA (falhas e dias aguardando reinício; cerca de 37 dias) é descartado inteiro, porque lacunas longas, sobretudo na estação seca, distorcem a distribuição dos dias por classe. O limite pode ser alterado. Os dias com incêndio que caem em dias sem FMA ficam fora da análise. O período mínimo de 5 anos é contado sobre os dias com FMA calculada.</p>
+      <p><b>Dia com incêndio.</b> Dia com número de ocorrências (ou focos) igual ou maior que o limite escolhido, dentro do período dos dados meteorológicos.</p>
+      <p><b>Tabela de contingência.</b> Nulo e Pequeno indicam “sem incêndio”; Médio, Alto e Muito alto indicam “com incêndio”. a = previsto e ocorreu, b = previsto e não ocorreu, c = não previsto e ocorreu, d = não previsto e não ocorreu, N = a + b + c + d.</p>
+      <p><b>Skill score e porcentagem de sucesso</b> (Sampaio e Soares, 2000; Nunes, Soares e Batista, 2007). G = a + d; H = [(a+b)(a+c) + (c+d)(b+d)] / N; SS = (G − H) / (N − H); PS = G / N × 100. SS e PS só mudam quando muda o limite entre Pequeno e Médio.</p>
+      <p><b>Probabilidades de detecção</b> (Santos et al., 2021). POD = a / (a + c), a fração dos dias com incêndio que a escala previu. POFD = b / (b + d), a fração dos dias sem incêndio em que a escala indicou perigo (alarme falso).</p>
+      <p><b>Curva ROC e índice de união</b> (Unal, 2017; Santos et al., 2021). Para cada valor de corte c da FMA, sensibilidade Se(c) = dias com incêndio e FMA &gt; c ÷ dias com incêndio; especificidade Sp(c) = dias sem incêndio e FMA ≤ c ÷ dias sem incêndio. A área sob a curva (AC) é calculada pelo método de Mann-Whitney. O ponto de corte ótimo minimiza IU(c) = |Se(c) − AC| + |Sp(c) − AC|. Com a opção marcada, o ajuste exige que esse ponto fique dentro da classe Médio.</p>
+      <p><b>Premissas.</b> Premissa da distribuição dos dias, em duas versões: maior número de dias em Médio diminuindo para os extremos (Tetto, 2012, usada por Pajewski et al. no Paraná) ou número de dias decrescente com a classe (Nunes et al., 2010, usada por Santos et al., 2021). Premissa das ocorrências: a porcentagem dos dias com incêndio aumenta com a classe de perigo.</p>
+      <p><b>Ajuste automático.</b> A calculadora testa centenas de milhares de combinações de limites de classe (valores inteiros; meios inteiros para Nulo). Descarta as que deixam o ponto de corte do índice de união fora de Médio (se a opção estiver marcada), escolhe as que menos violam a premissa dos dias, depois a das ocorrências, depois o maior skill score e, em empate, a escala mais próxima da original. Os limites podem ser editados à mão e tudo é recalculado na hora.</p>
+      <p><b>Período mínimo de dados.</b> A avaliação e o ajuste exigem pelo menos 5 anos de dados meteorológicos e de ocorrências, para que a escala reflita a variação do clima entre anos (anos secos e chuvosos) e não apenas o período carregado. A validação independente exige pelo menos 5 anos de calibração (75%) e 2 anos de validação (25%), ou seja, cerca de 8 anos de dias com FMA calculada. Recomenda-se ainda ter pelo menos 100 dias com incêndio na calibração.</p>
+      <p><b>Validação independente</b> (Wilks, 2011; Santos et al., 2021). Em “Uso dos dados”, escolhe-se entre usar somente calibração (100% dos dados) ou calibração com os 75% iniciais e validação com os 25% finais, em ordem cronológica. Na segunda opção, a avaliação da escala original e o ajuste usam só a calibração, e a escala ajustada é testada nos dados de validação, que ela não viu. A validação exige cerca de 8 anos de dias com FMA calculada (5 de calibração e 2 de validação); com menos, só a calibração com 100% dos dados fica disponível.</p>
+      <p><b>Arquivos aceitos diretamente.</b> CSV horário do INMET (com as linhas de cabeçalho da estação, colunas “Data Medicao”, “Hora Medicao”, precipitação e umidade relativa horárias; valores “null” são tratados como falha) e CSV do BDQueimadas/INPE (coluna “DataHora”, um foco por linha). Ao usar focos de um município, use dados meteorológicos de uma estação próxima.</p>
+      <p><b>Vários arquivos.</b> Cada campo aceita vários arquivos ao mesmo tempo (por exemplo, um download por ano do BDQueimadas, que limita cada consulta a 366 dias, ou um arquivo anual do INMET). Os arquivos são combinados numa única série; linhas idênticas repetidas em arquivos que se sobrepõem são removidas, e leituras meteorológicas com a mesma data e hora são contadas uma única vez. Os arquivos devem ter as mesmas colunas.</p>
+      <p><b>Outros formatos</b> (CSV com ; ou , e cabeçalho; também aceita .xlsx):</p>
+      <pre class="tpl">data;UR_13h;precipitacao_mm
+01/01/2020;72;0
+02/01/2020;65,5;3,2</pre>
+      <pre class="tpl">datahora;satelite
+2020/08/14 17:20:00;AQUA_M-T
+2020/08/14 17:20:00;AQUA_M-T</pre>
+      <div class="row"><button class="btn small" id="btnTplMet">Copiar modelo meteorológico</button><button class="btn small" id="btnTplFoc">Copiar modelo de ocorrências</button></div>
+      <p><b>Referências</b></p>
+      <ul class="refs">
+        <li>NUNES, J. R. S.; SOARES, R. V.; BATISTA, A. C. Ajuste da Fórmula de Monte Alegre Alterada (FMA+) para o estado do Paraná. <i>Floresta</i>, v. 37, n. 1, 2007.</li>
+        <li>NUNES, J. R. S. et al. Desempenho da Fórmula de Monte Alegre (FMA) e da Fórmula de Monte Alegre Alterada (FMA+) no distrito florestal de Monte Alegre. <i>Floresta</i>, v. 40, n. 2, p. 319-326, 2010.</li>
+        <li>PAJEWSKI, F. F.; KOVALSYKI, B.; TETTO, A. F. Ajuste do índice de perigo de incêndios FMA para o estado do Paraná. Universidade Federal do Paraná.</li>
+        <li>SAMPAIO, O. B.; SOARES, R. V. “Skill Score”: um método para análise da eficiência de índices de incêndios florestais. <i>Floresta</i>, v. 30, n. 1/2, 2000.</li>
+        <li>SANTOS, J. F. L. et al. Adaptation of the Fórmula de Monte Alegre for the danger prediction of forest fires in the central region of São Paulo state. <i>Ciência Florestal</i>, v. 31, n. 4, p. 1867-1884, 2021. <a href="https://doi.org/10.5902/1980509852851" target="_blank" rel="noopener">doi.org/10.5902/1980509852851</a></li>
+        <li>SOARES, R. V. Índices de perigo de incêndio. <i>Floresta</i>, v. 3, n. 3, p. 19-40, 1972.</li>
+        <li>TETTO, A. F. Comportamento histórico dos incêndios florestais na Fazenda Monte Alegre no período de 1965 a 2009. Tese (Doutorado) – UFPR, 2012.</li>
+        <li>UNAL, I. Defining an optimal cut-point value in ROC analysis: an alternative approach. <i>Computational and Mathematical Methods in Medicine</i>, 2017, 3762651.</li>
+        <li>WILKS, D. S. <i>Statistical methods in the atmospheric sciences</i>. 3. ed. Oxford: Elsevier, 2011.</li>
+      </ul>
+    </div>
+  </details>
+  <footer class="foot">Ferramenta de apoio ao planejamento da prevenção e do combate a incêndios florestais. Os resultados dependem da qualidade e da extensão dos dados; recomenda-se reavaliar a escala periodicamente.</footer>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+
+<script id="core">
+// ======== núcleo de cálculo (sem DOM) ========
+const CLASSES=["Nulo","Pequeno","Médio","Alto","Muito alto"];
+const ORIGINAL=[1,3,8,20];
+const DAY=86400000;
+const MIN_CAL_YEARS=5, MIN_VAL_YEARS=2, MIN_FIRE_DAYS=100, YEAR_DAYS=365.25, TOL=0.97;
+
+function toKey(ms){const d=new Date(ms);return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0");}
+function parseDateMs(v){
+  if(v==null||v==="")return NaN;
+  if(typeof v==="number"){ if(v>20000&&v<80000) return Math.round((v-25569))*DAY; return NaN; }
+  const s=String(v).trim();
+  let m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if(m) return Date.UTC(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/);
+  if(m){let y=+m[3]; if(y<100) y+= y<50?2000:1900; return Date.UTC(y,+m[2]-1,+m[1]);}
+  m=s.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if(m) return Date.UTC(+m[1],+m[2]-1,+m[3]);
+  const n=Number(s); if(!isNaN(n)) return parseDateMs(n);
+  return NaN;
+}
+function parseNum(v){
+  if(v==null||v==="")return NaN;
+  if(typeof v==="number")return v<=-999?NaN:v;
+  let s=String(v).trim().replace(/\s/g,"");
+  if(/^-?\d{1,3}(\.\d{3})+,\d+$/.test(s)) s=s.replace(/\./g,"");
+  s=s.replace(",",".");
+  const n=parseFloat(s); return (isNaN(n)||n<=-999)?NaN:n;
+}
+function parseHour(v){
+  if(v==null||v==="")return NaN;
+  if(typeof v==="number"){ if(v<1) return Math.round(v*24)%24; if(v>=100) return Math.floor(v/100); return Math.floor(v); }
+  const s=String(v).trim();
+  let m=s.match(/^(\d{1,2}):/); if(m) return +m[1];
+  m=s.match(/^(\d{3,4})/); if(m) return Math.floor(+m[1]/100);
+  m=s.match(/(\d{1,2})/); return m?+m[1]:NaN;
+}
+function hourFromDate(v){ const s=String(v??""); const m=s.match(/[ T](\d{1,2}):\d{2}/); return m?+m[1]:NaN; }
+
+function buildDaily(rows,map,urHour){
+  const by=new Map(), seenRow=new Set();
+  for(const r of rows){
+    const rk=String(r[map.date]??"").trim()+"|"+(map.hour?String(r[map.hour]??"").trim():"");
+    if(seenRow.has(rk)) continue; seenRow.add(rk);
+    let t=parseDateMs(r[map.date]); if(isNaN(t)) continue;
+    let h=map.hour?parseHour(r[map.hour]):hourFromDate(r[map.date]);
+    if(map.utc && !isNaN(h)){ const off=map.off??-3; const loc=t+(h+off)*3600000; t=Math.floor(loc/DAY)*DAY; h=((h+off)%24+24)%24; }
+    const o=by.get(t)||{p:[],u:[],uh:[],n:0,pw:0};
+    o.n++; const p=parseNum(r[map.pp]), u=parseNum(r[map.ur]);
+    if(!isNaN(u)){ o.u.push(u); if(!isNaN(h)&&h===urHour) o.uh.push(u); }
+    by.set(t,o);
+    // chuva do dia: das 14 h do dia anterior às 13 h do dia (leituras horárias); dado diário fica no próprio dia
+    const tp=(!isNaN(h)&&h>=14)?t+DAY:t;
+    const op=by.get(tp)||{p:[],u:[],uh:[],n:0,pw:0};
+    op.pw++; if(!isNaN(p)) op.p.push(p);
+    by.set(tp,op);
+  }
+  const keys=[...by.keys()].sort((a,b)=>a-b);
+  if(!keys.length) return {days:[],filled:0,hourly:false,dup:false};
+  const hourly=keys.some(k=>by.get(k).n>1);
+  if(hourly){ // descarta dias incompletos nas pontas (ex.: horas que mudam de dia na conversão UTC → Brasília)
+    const ns=keys.map(k=>by.get(k).n).sort((x,y)=>x-y), full=ns[Math.floor(ns.length/2)];
+    while(keys.length && by.get(keys[0]).n<full/2) keys.shift();
+    while(keys.length && by.get(keys[keys.length-1]).n<full/2) keys.pop();
+    if(!keys.length) return {days:[],filled:0,hourly,dup:false};
+  }
+  const days=[]; let urFromHour=false, dup=false;
+  for(let t=keys[0];t<=keys[keys.length-1];t+=DAY){
+    const o=by.get(t); let ur=NaN, pp=NaN;
+    if(o){
+      pp=o.p.length?o.p.reduce((a,b)=>a+b,0):NaN;
+      if(hourly && o.pw<20) pp=NaN; // janela de chuva incompleta (ex.: primeiro dia da série)
+      if(hourly){ if(o.uh.length){ur=o.uh[0];urFromHour=true;} }
+      else ur=o.u.length?o.u[0]:NaN;
+    }
+    days.push({t,key:toKey(t),year:new Date(t).getUTCFullYear(),ur,pp});
+  }
+  const noHour=hourly && !urFromHour; // dados horários sem nenhuma leitura às 13 h locais: não há substituição
+  if(noHour) return {days:[],filled:0,hourly,dup:false,noHour:true};
+  const miss13=hourly?days.filter(d=>isNaN(d.ur)).length:0;
+  for(const d of days) if(!isNaN(d.ur)) d.ur=Math.min(100,Math.max(1,d.ur));
+  const filled=0;
+  return {days,filled,hourly,dup,miss13};
+}
+
+// Falha (UR ou chuva ausente): o dia é desconsiderado e a FMA só volta a ser calculada
+// a partir do próximo dia com chuva > 12,9 mm (FMA = 0). O início da série também aguarda esse reinício.
+function computeFMA(days,reductions){
+  let prev=0, valid=false;
+  for(const d of days){
+    const p=d.pp, miss=isNaN(d.ur)||isNaN(p);
+    d.miss=miss;
+    if(!isNaN(p)&&p>12.9){ d.fma=0; prev=0; valid=true; d.status="ok"; continue; }
+    if(miss){ d.fma=NaN; valid=false; d.status="falha"; continue; }
+    if(!valid){ d.fma=NaN; d.status="reinicio"; continue; }
+    const inc=100/d.ur; let f;
+    if(!reductions||p<=2.4) f=prev+inc;
+    else if(p<=4.9) f=prev*0.7+inc;
+    else if(p<=9.9) f=prev*0.4+inc;
+    else f=prev*0.2+inc;
+    d.fma=f; prev=f; d.status="ok";
+  }
+  return days;
+}
+
+function fireCounts(rows,map){
+  const c=new Map();
+  for(const r of rows){
+    let t=parseDateMs(r[map.date]); if(isNaN(t)) continue;
+    if(map.utc){ const s=String(r[map.date]??""); const m=s.match(/[ T](\d{1,2}):(\d{2})/); if(m){ const off=map.off??-3; const loc=t+((+m[1]+off)*60+(+m[2]))*60000; t=Math.floor(loc/DAY)*DAY; } }
+    const n=map.count?parseNum(r[map.count]):1; if(isNaN(n)||n<=0) continue;
+    c.set(t,(c.get(t)||0)+n);
+  }
+  return c;
+}
+
+function yearQuality(days,maxPct){
+  const by=new Map();
+  for(const d of days){ const o=by.get(d.year)||{year:d.year,n:0,falha:0,reinicio:0,firesLost:0}; o.n++; if(d.status==="falha")o.falha++; else if(d.status==="reinicio")o.reinicio++; by.set(d.year,o); }
+  const ys=[...by.values()];
+  for(const y of ys){ y.semFMA=y.falha+y.reinicio; y.pct=y.semFMA/y.n*100; y.excluded=y.pct>maxPct; }
+  return ys;
+}
+function classOf(v,T){ if(v<=T[0])return 0; if(v<=T[1])return 1; if(v<=T[2])return 2; if(v<=T[3])return 3; return 4; }
+function upper(arr,x){let lo=0,hi=arr.length;while(lo<hi){const m=(lo+hi)>>1; if(arr[m]<=x)lo=m+1; else hi=m;}return lo;}
+function lower(arr,x){let lo=0,hi=arr.length;while(lo<hi){const m=(lo+hi)>>1; if(arr[m]<x)lo=m+1; else hi=m;}return lo;}
+function prep(days){
+  const all=Float64Array.from(days.map(d=>d.fma)).sort();
+  const fv=Float64Array.from(days.filter(d=>d.fire).map(d=>d.fma)).sort();
+  const nf=Float64Array.from(days.filter(d=>!d.fire).map(d=>d.fma)).sort();
+  return {all,fv,nf,N:all.length,F:fv.length};
+}
+function countsFor(P,T){
+  const ca=T.map(t=>upper(P.all,t)), cf=T.map(t=>upper(P.fv,t));
+  return {d:[ca[0],ca[1]-ca[0],ca[2]-ca[1],ca[3]-ca[2],P.N-ca[3]], f:[cf[0],cf[1]-cf[0],cf[2]-cf[1],cf[3]-cf[2],P.F-cf[3]]};
+}
+function skill(P,T){
+  const predNo=upper(P.all,T[1]), fireNo=upper(P.fv,T[1]);
+  const N=P.N, F=P.F;
+  const c=fireNo, a=F-fireNo, d=predNo-fireNo, b=(N-predNo)-a;
+  const G=a+d, H=N?((a+b)*(a+c)+(c+d)*(b+d))/N:NaN;
+  return {a,b,c,d,N,G,H,ss:(N-H)===0?NaN:(G-H)/(N-H),ps:N?G/N*100:NaN,pod:(a+c)?a/(a+c)*100:NaN,pofd:(b+d)?b/(b+d)*100:NaN};
+}
+// violações das premissas (em pontos percentuais)
+function violDays(pd,mode){
+  if(mode==="decr"){ let v=0; for(let i=1;i<5;i++) v+=Math.max(0,pd[i]-pd[i-1]); return v; }
+  const max=Math.max(pd[0],pd[1],pd[2],pd[3],pd[4]);
+  return Math.max(0,max-pd[2])+Math.max(0,pd[0]-pd[1])+Math.max(0,pd[4]-pd[3]);
+}
+function violFire(pf){ let v=0; for(let i=1;i<5;i++) v+=Math.max(0,pf[i-1]-pf[i]); return v; }
+function premises(cnt,N,F,mode){
+  const pd=cnt.d.map(x=>N?x/N*100:0), pf=cnt.f.map(x=>F?x/F*100:0);
+  const v1=violDays(pd,mode), v2=violFire(pf);
+  return {pd,pf,v1,v2,p1:v1<1e-9,p2:F>0&&v2<1e-9,high:pf[3]+pf[4]};
+}
+function evaluate(P,T,mode){ const cnt=countsFor(P,T); return {T,cnt,...premises(cnt,P.N,P.F,mode),...skill(P,T)}; }
+
+// curva ROC, área (Mann-Whitney) e ponto de corte pelo índice de união (Unal, 2017)
+function roc(P){
+  const F=P.F, NF=P.N-P.F; if(!F||!NF) return null;
+  let s=0; for(const v of P.fv){ const lt=lower(P.nf,v), le=upper(P.nf,v); s+=lt+0.5*(le-lt); }
+  const auc=s/(F*NF);
+  const uniq=[]; for(let i=0;i<P.all.length;i++){ if(i===0||P.all[i]!==P.all[i-1]) uniq.push(P.all[i]); }
+  let best=null; const pts=[{x:1,y:1}];
+  const step=Math.max(1,Math.floor(uniq.length/600));
+  uniq.forEach((c,i)=>{
+    const se=(F-upper(P.fv,c))/F, sp=upper(P.nf,c)/NF;
+    const iu=Math.abs(se-auc)+Math.abs(sp-auc);
+    if(!best||iu<best.iu) best={cut:c,se,sp,iu};
+    if(i%step===0||i===uniq.length-1) pts.push({x:1-sp,y:se});
+  });
+  pts.push({x:0,y:0});
+  return {auc,curve:pts,...best};
+}
+function rocPoint(P,c){ const F=P.F,NF=P.N-P.F; return {x:1-upper(P.nf,c)/NF,y:(F-upper(P.fv,c))/F}; }
+
+function autoAdjust(P,{keepNulo,mode,cut}){
+  const t1s=keepNulo?[1]:[0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,6,7,8];
+  const vals=new Set(t1s); for(let v=1;v<=90;v++) vals.add(v); for(let v=95;v<=250;v+=5) vals.add(v);
+  const ca=new Map(), cf=new Map(); for(const v of vals){ ca.set(v,upper(P.all,v)); cf.set(v,upper(P.fv,v)); }
+  const t4s=[]; for(let v=5;v<=90;v++) t4s.push(v); for(let v=95;v<=250;v+=5) t4s.push(v);
+  const N=P.N,F=P.F,NF=N-F;
+  const lg=t=>Math.log(t);
+  let best=null, tested=0, cutUsed=cut!=null;
+  const pd=[0,0,0,0,0], pf=[0,0,0,0,0];
+  const search=(useCut)=>{
+    for(const t1 of t1s) for(let t2=Math.floor(t1)+1;t2<=40;t2++){
+      if(useCut && !(t2<=cut)) continue;
+      // skill score depende só de t2
+      const predNo=ca.get(t2), fireNo=cf.get(t2);
+      const a=F-fireNo, c=fireNo, d=predNo-fireNo, b=(N-predNo)-a;
+      const H=((a+b)*(a+c)+(c+d)*(b+d))/N; const ss=(N-H)?((a+d)-H)/(N-H):-9;
+      for(let t3=t2+2;t3<=90;t3++){
+        if(useCut && !(cut<t3)) continue;
+        for(const t4 of t4s){
+          if(t4<t3+2) continue; tested++;
+          const A=[ca.get(t1),ca.get(t2),ca.get(t3),ca.get(t4)], B=[cf.get(t1),cf.get(t2),cf.get(t3),cf.get(t4)];
+          pd[0]=A[0]/N*100; pd[1]=(A[1]-A[0])/N*100; pd[2]=(A[2]-A[1])/N*100; pd[3]=(A[3]-A[2])/N*100; pd[4]=(N-A[3])/N*100;
+          pf[0]=B[0]/F*100; pf[1]=(B[1]-B[0])/F*100; pf[2]=(B[2]-B[1])/F*100; pf[3]=(B[3]-B[2])/F*100; pf[4]=(F-B[3])/F*100;
+          const v1=violDays(pd,mode), v2=violFire(pf);
+          const dist=Math.abs(lg(t1/1))+Math.abs(lg(t2/3))+Math.abs(lg(t3/8))+Math.abs(lg(t4/20));
+          const key=[v1,v2,-ss,dist];
+          if(!best||lexLess(key,best.key)) best={T:[t1,t2,t3,t4],key};
+        }
+      }
+    }
+  };
+  if(cutUsed){ search(true); if(!best){ cutUsed=false; search(false); } } else search(false);
+  return {T:best.T,tested,p1ok:best.key[0]<1e-9,p2ok:best.key[1]<1e-9,cutUsed,cutRequested:cut!=null};
+}
+function lexLess(a,b){for(let i=0;i<a.length;i++){const d=a[i]-b[i]; if(Math.abs(d)>1e-9) return d<0;} return false;}
+
+function quadFit(y){
+  const x=[1,2,3,4,5]; let S=[0,0,0,0,0], Sy=[0,0,0];
+  for(let i=0;i<5;i++){const xi=x[i]; for(let k=0;k<5;k++)S[k]+=xi**k; Sy[0]+=y[i]; Sy[1]+=xi*y[i]; Sy[2]+=xi*xi*y[i];}
+  const A=[[S[4],S[3],S[2]],[S[3],S[2],S[1]],[S[2],S[1],S[0]]], B=[Sy[2],Sy[1],Sy[0]];
+  const det=m=>m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+  const D=det(A); const sol=[0,1,2].map(j=>det(A.map((r,i)=>r.map((v,k)=>k===j?B[i]:v)))/D);
+  const [a,b,c]=sol; const mean=y.reduce((s,v)=>s+v,0)/5;
+  let ssr=0,sst=0; for(let i=0;i<5;i++){const f=a*x[i]**2+b*x[i]+c; ssr+=(y[i]-f)**2; sst+=(y[i]-mean)**2;}
+  return {a,b,c,r2:sst?1-ssr/sst:NaN};
+}
+
+// dados de exemplo fictícios (gerador com semente)
+function sampleData(){
+  let s=20240917; const rnd=()=>{s=(s*1664525+1013904223)%4294967296; return s/4294967296;};
+  const gauss=()=>{let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);};
+  const met=[], foc=[]; let prev=0;
+  for(let t=Date.UTC(2014,0,1); t<=Date.UTC(2023,11,31); t+=DAY){
+    const d=new Date(t), doy=(t-Date.UTC(d.getUTCFullYear(),0,1))/DAY;
+    const season=Math.cos(2*Math.PI*(doy-15)/365);
+    let ur=Math.round(60+13*season+gauss()*11); ur=Math.min(98,Math.max(18,ur));
+    const pr=0.22+0.16*season; let pp=0;
+    if(rnd()<pr) pp=Math.round(-Math.log(1-rnd())*13*10)/10;
+    const key=String(d.getUTCDate()).padStart(2,"0")+"/"+String(d.getUTCMonth()+1).padStart(2,"0")+"/"+d.getUTCFullYear();
+    const gap=(d.getUTCFullYear()===2017&&doy>=160&&doy<200)||rnd()<0.004;
+    met.push({data:key,UR_13h:gap?"":ur,precipitacao_mm:pp});
+    const inc=100/ur; let f;
+    if(pp>12.9)f=0; else if(pp<=2.4)f=prev+inc; else if(pp<=4.9)f=prev*.7+inc; else if(pp<=9.9)f=prev*.4+inc; else f=prev*.2+inc; prev=f;
+    const pf=0.01+0.45/(1+Math.exp(-(f-24)/6));
+    if(rnd()<pf){ const n=1+Math.floor(rnd()*4); const ymd=d.getUTCFullYear()+"/"+String(d.getUTCMonth()+1).padStart(2,"0")+"/"+String(d.getUTCDate()).padStart(2,"0");
+      for(let i=0;i<n;i++) foc.push({datahora:ymd+" 17:"+String(Math.floor(rnd()*60)).padStart(2,"0")+":00",satelite:rnd()<.5?"AQUA_M-T":"NOAA-20"}); }
+  }
+  return {met,foc};
+}
+</script>
+
+<script>
+// ======== interface ========
+const $=id=>document.getElementById(id);
+const state={met:null,foc:null,adj:[1,3,8,20],sample:true,days:null,cal:null,val:null,Pc:null,Pv:null,autoInfo:null,view:"cal"};
+const fmt=(v,d=2)=>(v==null||isNaN(v))?"—":v.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtT=v=>v.toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1});
+const dBR=k=>k.split("-").reverse().join("/");
+const mode=()=>$("optMode").value;
+
+function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(t._h);t._h=setTimeout(()=>t.hidden=true,2200);}
+async function copy(text,msg){try{await navigator.clipboard.writeText(text);toast(msg);}catch(e){const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast(msg);}catch(_){toast("Não foi possível copiar");}ta.remove();}}
+
+// ---- leitura de arquivos ----
+function parseCSV(text){
+  const lines=text.replace(/\r/g,"").replace(/\uFEFF/g,"").split("\n");
+  const head=lines.slice(0,60);
+  let best=";",bestScore=-1;
+  for(const dl of [";",",","\t"]){ const counts=head.map(l=>l.split(dl).length-1).filter(c=>c>0); if(!counts.length)continue;
+    const freq={}; counts.forEach(c=>freq[c]=(freq[c]||0)+1); const top=Math.max(...Object.values(freq)); if(top>bestScore){bestScore=top;best=dl;} }
+  const split=l=>{const out=[];let cur="",q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(ch==='"'){if(q&&l[i+1]==='"'){cur+='"';i++;}else q=!q;}else if(ch===best&&!q){out.push(cur);cur="";}else cur+=ch;}out.push(cur);return out.map(s=>s.trim());};
+  const counts=head.map(l=>l.split(best).length-1); const freq={}; counts.forEach(c=>{if(c>0)freq[c]=(freq[c]||0)+1;});
+  const ent=Object.entries(freq); if(!ent.length) throw new Error("não encontrei colunas separadas por ; , ou tabulação");
+  const modeC=+ent.sort((a,b)=>b[1]-a[1])[0][0];
+  const hi=counts.findIndex(c=>c===modeC);
+  const cols=split(lines[hi]).map((c,i)=>c||("coluna_"+(i+1)));
+  const rows=[];
+  for(let i=hi+1;i<lines.length;i++){ if(!lines[i].trim())continue; const p=split(lines[i]); const o={}; cols.forEach((c,j)=>o[c]=p[j]??""); rows.push(o); }
+  return {cols,rows,preamble:lines.slice(0,hi).join("\n")};
+}
+function readFile(file){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader(); const isText=/\.(csv|txt)$/i.test(file.name);
+    fr.onerror=()=>rej(new Error("falha ao ler o arquivo"));
+    fr.onload=()=>{try{
+      const buf=new Uint8Array(fr.result);
+      if(isText){ const u=new TextDecoder("utf-8").decode(buf); const txt=u.includes(String.fromCharCode(0xFFFD))?new TextDecoder("latin1").decode(buf):u; res(parseCSV(txt)); }
+      else{ const wb=XLSX.read(buf,{type:"array"}); const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{defval:"",raw:true}); res({cols:rows.length?Object.keys(rows[0]):[],rows}); }
+    }catch(e){rej(e);}};
+    fr.readAsArrayBuffer(file);
+  });
+}
+const TZ_UF={"acre":-5,"ac":-5,"amazonas":-4,"am":-4,"roraima":-4,"rr":-4,"rondonia":-4,"ro":-4,"mato grosso":-4,"mt":-4,"mato grosso do sul":-4,"ms":-4};
+["para","amapa","tocantins","maranhao","piaui","ceara","rio grande do norte","paraiba","pernambuco","alagoas","sergipe","bahia","minas gerais","espirito santo","rio de janeiro","sao paulo","parana","santa catarina","rio grande do sul","goias","distrito federal","pa","ap","to","ma","pi","ce","rn","pb","pe","al","se","ba","mg","es","rj","sp","pr","sc","rs","go","df"].forEach(k=>TZ_UF[k]=-3);
+const norm=s=>String(s).normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+function guess(cols,res,exclude=[]){ for(const re of res){ const c=cols.find(c=>re.test(norm(c))&&!exclude.includes(c)); if(c) return c; } return ""; }
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");}
+function fillSelect(sel,cols,val,optional){ sel.innerHTML=(optional?'<option value="">— nenhuma —</option>':'')+cols.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join(""); sel.value=val||(optional?"":cols[0]||""); }
+
+function setMet(data,name){
+  const prev={d:$("mDate").value,u:$("mUR").value,p:$("mPP").value,h:$("mHour").value,utc:$("metUTC").checked};
+  state.met=data;
+  const c=data.cols;
+  const d=guess(c,[/^data$/,/^date$/,/data/,/date|dia/]);
+  const h=guess(c,[/^hora/,/hour/,/hora/],[d]);
+  fillSelect($("mDate"),c,d); fillSelect($("mUR"),c,guess(c,[/^ur(_|\b)/,/umid.*rel|umidade relativa/,/umid/,/\brh\b|^rh/,/^ur/])); fillSelect($("mPP"),c,guess(c,[/precip/,/chuva/,/^pp/,/rain|prcp/])); fillSelect($("mHour"),c,h,true);
+  const inmet=/codigo estacao|periodicidade|estacao:/.test(norm(data.preamble||""))||/hora medicao|utc/.test(norm(h||""));
+  $("urHour").value=13; $("metUTC").checked=inmet;
+  if(prev.d&&c.includes(prev.d)) $("mDate").value=prev.d; if(prev.u&&c.includes(prev.u)) $("mUR").value=prev.u; if(prev.p&&c.includes(prev.p)) $("mPP").value=prev.p; if(prev.h&&c.includes(prev.h)) $("mHour").value=prev.h;
+}
+function setFoc(data,name){
+  const prevF={d:$("fDate").value,c:$("fCount").value};
+  state.foc=data;
+  const c=data.cols;
+  fillSelect($("fDate"),c,guess(c,[/^datahora$/,/data.?hora/,/acq_date/,/^data$/,/date|data/]));
+  fillSelect($("fCount"),c,guess(c,[/^(n|num|qtd|numero)?_?(focos|ocorrencias|incendios)$/,/count/]),true);
+  state.tzNote="";
+  const uf=guess(c,[/^estado$/,/^uf$/,/estado|^sigla_?uf/]);
+  if(uf){ const cnt={}; data.rows.forEach(r=>{const k=norm(r[uf]).trim(); if(k) cnt[k]=(cnt[k]||0)+1;}); const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+    if(top){ const z=TZ_UF[top[0]]; state.tzNote=""; if(z!==undefined){ $("tzOff").value=String(z); state.tzNote=`Fuso definido pelo estado dos focos (${top[0].toUpperCase()}): UTC${z<0?"−":"+"}${Math.abs(z)}.`+(top[0]==="amazonas"||top[0]==="am"?" Parte do sudoeste do Amazonas usa UTC−5; confira.":"")+(Object.keys(cnt).length>1?" O arquivo tem focos de mais de um estado.":""); } } }
+  if(prevF.d&&c.includes(prevF.d)) $("fDate").value=prevF.d; if(prevF.c&&c.includes(prevF.c)) $("fCount").value=prevF.c;
+  const fd=$("fDate").value; $("focUTC").checked=/satelite|frp|riscofogo/.test(norm(c.join(" ")))&&data.rows.slice(0,20).some(r=>!isNaN(hourFromDate(r[fd])));
+}
+// ---- vários arquivos por conjunto (ex.: um download por ano) ----
+state.files={met:[],foc:[]};
+function mergeFiles(list){
+  const base=list[0].data.cols, nb=base.map(norm);
+  const rows=[], seen=new Set(), notes=[]; let dup=0;
+  for(const f of list){
+    const cols=f.data.cols, same=cols.length===base.length&&cols.every((c,i)=>norm(c)===nb[i]);
+    const byName=cols.every(c=>nb.includes(norm(c)));
+    let mapCol;
+    if(same||byName) mapCol=c=>base[nb.indexOf(norm(c))];
+    else if(cols.length===base.length){ mapCol=c=>base[cols.indexOf(c)]; notes.push(`“${f.name}” tem nomes de colunas diferentes do primeiro arquivo e foi combinado pela posição das colunas.`); }
+    else { f.rejected=true; notes.push(`“${f.name}” foi ignorado: as colunas não correspondem às do primeiro arquivo (${base.slice(0,4).join(", ")}…).`); continue; }
+    f.rejected=false;
+    for(const r of f.data.rows){
+      const o={}; for(const c of cols) o[mapCol(c)]=r[c];
+      const key=base.map(c=>String(o[c]??"").trim()).join("\u0001");
+      if(seen.has(key)){dup++; continue;} seen.add(key); rows.push(o);
+    }
+  }
+  return {data:{cols:base,rows,preamble:list[0].data.preamble},dup,notes};
+}
+function renderFileList(kind){
+  const list=state.files[kind], el=$(kind==="met"?"nameMet":"nameFoc");
+  if(!list.length){ el.innerHTML=kind==="met"?"Nenhum arquivo meteorológico carregado":"Nenhum arquivo de ocorrências carregado"; return; }
+  const m=state.merged?.[kind];
+  el.innerHTML=`<div class="flist">${list.map((f,i)=>`<span class="fchip" title="${esc(f.name)}"><span>${esc(f.name)}${f.rejected?" (ignorado)":""}</span>${state.sample?"":`<button type="button" data-kind="${kind}" data-i="${i}" aria-label="Remover ${esc(f.name)}">×</button>`}</span>`).join("")}
+    <span class="ftot">${list.length} arquivo${list.length>1?"s":""} · ${(m?.data.rows.length??0).toLocaleString("pt-BR")} linhas${m?.dup?` · ${m.dup.toLocaleString("pt-BR")} linhas repetidas removidas`:""}</span></div>`;
+  el.querySelectorAll("button[data-i]").forEach(b=>b.addEventListener("click",()=>{ state.files[b.dataset.kind].splice(+b.dataset.i,1); applyFiles(b.dataset.kind); run(true); }));
+}
+function applyFiles(kind){
+  state.merged=state.merged||{};
+  const list=state.files[kind];
+  if(!list.length){ state.merged[kind]=null;
+    if(kind==="met"){ state.met=null; ["mDate","mUR","mPP"].forEach(id=>fillSelect($(id),[],"")); fillSelect($("mHour"),[],"",true); }
+    else { state.foc=null; fillSelect($("fDate"),[],""); fillSelect($("fCount"),[],"",true); }
+  } else {
+    const m=mergeFiles(list); state.merged[kind]=m;
+    if(kind==="met") setMet(m.data); else setFoc(m.data);
+  }
+  renderFileList(kind);
+}
+async function onFiles(kind,files){
+  files=[...files]; if(!files.length) return;
+  $("dataAlert").innerHTML="";
+  if(state.sample){ state.sample=false; $("sampleBadge").hidden=true; state.files={met:[],foc:[]}; applyFiles("met"); applyFiles("foc"); }
+  const errs=[];
+  for(const file of files){
+    try{ const data=await readFile(file); if(!data.rows.length) throw new Error("a planilha não tem linhas de dados");
+      const i=state.files[kind].findIndex(f=>f.name===file.name);
+      if(i>=0) state.files[kind][i]={name:file.name,data}; else state.files[kind].push({name:file.name,data});
+    }catch(e){ errs.push(`Não foi possível ler “${esc(file.name)}”: ${esc(e.message)}.`); }
+  }
+  applyFiles(kind);
+  state.showVal=false; run(true);
+  const notes=[...errs,...(state.merged?.met?.notes||[]),...(state.merged?.foc?.notes||[]).map(esc)];
+  if(notes.length) $("dataAlert").insertAdjacentHTML("afterbegin",notes.map(n=>`<div class="alert ${errs.includes(n)?"bad":"warn"}">${n}</div>`).join(""));
+}
+$("fileMet").addEventListener("change",e=>{onFiles("met",e.target.files); e.target.value="";});
+$("fileFoc").addEventListener("change",e=>{onFiles("foc",e.target.files); e.target.value="";});
+for(const [id,kind] of [["dropMet","met"],["dropFoc","foc"]]){
+  const el=$(id);
+  el.addEventListener("dragover",e=>{e.preventDefault();el.classList.add("over");});
+  el.addEventListener("dragleave",()=>el.classList.remove("over"));
+  el.addEventListener("drop",e=>{e.preventDefault();el.classList.remove("over"); onFiles(kind,e.dataTransfer.files);});
+}
+function loadSample(){
+  const s=sampleData();
+  state.sample=true;
+  state.files={met:[{name:"exemplo_meteorologia.csv",data:{cols:["data","UR_13h","precipitacao_mm"],rows:s.met}}],foc:[{name:"exemplo_focos.csv",data:{cols:["datahora","satelite"],rows:s.foc}}]};
+  applyFiles("met"); applyFiles("foc");
+  $("tzOff").value="-3";
+  state.sample=true; $("sampleBadge").hidden=false; state.showVal=false; run(true);
+}
+["mDate","mUR","mPP","mHour","fDate","fCount","urHour","metUTC","focUTC","tzOff","optRed","optMin","optMaxGap"].forEach(id=>$(id).addEventListener("change",()=>run(true)));
+$("optMode").addEventListener("change",()=>{ $("optKeepNulo").checked=mode()==="peak"; recalcAuto(); });
+["optCut","optKeepNulo"].forEach(id=>$(id).addEventListener("change",recalcAuto));
+function recalcAuto(){ if(!state.Pc) return; const O=evaluate(state.Pc,ORIGINAL,mode()); if(O.p1&&O.p2&&!$("optCut").checked){state.adj=[...ORIGINAL];state.autoInfo=null;$("autoNote").textContent="A escala original já atende às premissas.";} else doAuto(); renderScales(); renderResults(); }
+
+// ---- escalas ----
+function scaleRows(T,editable){
+  const lims=[`≤ ${fmtT(T[0])}`,`${fmtT(T[0]+0.1)} a ${fmtT(T[1])}`,`${fmtT(T[1]+0.1)} a ${fmtT(T[2])}`,`${fmtT(T[2]+0.1)} a ${fmtT(T[3])}`,`> ${fmtT(T[3])}`];
+  let h=`<tr><th>Classe</th><th>Valor da FMA</th>${editable?"<th>Limite superior</th>":""}</tr>`;
+  CLASSES.forEach((c,i)=>{ h+=`<tr><td><span class="cls"><i style="background:var(--c${i})"></i>${c}</span></td><td class="num">${lims[i]}</td>${editable?`<td class="thr">${i<4?`<input type="number" step="0.1" min="0" id="thr${i}" value="${T[i]}" aria-label="Limite superior de ${c}">`:"—"}</td>`:""}</tr>`; });
+  return h;
+}
+function renderScales(){
+  $("tOrigScale").innerHTML=scaleRows(ORIGINAL,false);
+  $("tAdjScale").innerHTML=scaleRows(state.adj,true);
+  for(let i=0;i<4;i++) $("thr"+i).addEventListener("change",onThr);
+}
+function onThr(){
+  const T=[0,1,2,3].map(i=>parseNum($("thr"+i).value));
+  if(T.some(isNaN)||T.some((t,i)=>i&&t<=T[i-1])){ $("autoNote").textContent="Os limites precisam ser crescentes (Nulo < Pequeno < Médio < Alto)."; return; }
+  state.adj=T; state.autoInfo=null; $("autoNote").textContent="Escala editada manualmente."; renderScales(); renderResults();
+}
+document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{state.adj=b.dataset.preset.split(",").map(Number); state.autoInfo=null; $("autoNote").textContent=`Escala “${b.textContent}” aplicada (${b.title}).`; renderScales(); renderResults();}));
+$("btnAuto").addEventListener("click",()=>{doAuto(); renderScales(); renderResults();});
+function doAuto(){
+  const P=state.Pc;
+  if(!P||!P.F) { $("autoNote").textContent="Sem dias com incêndio no período de calibração: não é possível ajustar."; return; }
+  const R=state.rocC;
+  const r=autoAdjust(P,{keepNulo:$("optKeepNulo").checked,mode:mode(),cut:($("optCut").checked&&R)?R.cut:null});
+  state.adj=r.T; state.autoInfo=r;
+  let msg=`Ajuste automático: ${r.tested.toLocaleString("pt-BR")} escalas testadas${state.Pv?" com os dados de calibração":""}. `;
+  if(r.cutRequested) msg+= r.cutUsed?`O ponto de corte (FMA > ${fmt(R.cut,1)}) ficou dentro de Médio. `:`Não houve escala que atendesse às premissas com o ponto de corte (${fmt(R.cut,1)}) em Médio; a restrição foi relaxada. `;
+  msg+= r.p1ok?(r.p2ok?"A escala atende às duas premissas.":"Atende à premissa dos dias; para as ocorrências foi escolhida a de menor desvio."):"Nenhuma escala atendeu plenamente à premissa dos dias; foi escolhida a de menor desvio.";
+  $("autoNote").textContent=msg;
+}
+
+// ---- cálculo principal ----
+// Validação: os 25% finais dos dias com FMA calculada validam; os 75% iniciais calibram.
+const VAL_SHARE=0.25;
+function splitInfo(use){
+  const ic=Math.round(use.length*(1-VAL_SHARE)), nv=use.length-ic;
+  const ok=ic/YEAR_DAYS>=MIN_CAL_YEARS*TOL && nv/YEAR_DAYS>=MIN_VAL_YEARS*TOL;
+  return {ic,nv,ok,cal:use.slice(0,ic),val:use.slice(ic)};
+}
+function renderSplitNote(use,sp,doSplit){
+  const sel=$("optSplit"), note=$("splitNote"), opt=sel.querySelector('option[value="split"]');
+  opt.disabled=!sp.ok; sel.value=doSplit?"split":"all";
+  if(!sp.ok){
+    note.textContent=`Validação indisponível: separar 75% e 25% exige cerca de ${Math.ceil(MIN_VAL_YEARS/VAL_SHARE)} anos de dias com FMA calculada (${MIN_CAL_YEARS} de calibração e ${MIN_VAL_YEARS} de validação); a série tem ${fmt(use.length/YEAR_DAYS,1)}.`;
+  } else if(doSplit){
+    note.textContent=`Calibração: ${dBR(sp.cal[0].key)} a ${dBR(sp.cal.at(-1).key)} (${sp.ic.toLocaleString("pt-BR")} dias) · validação: ${dBR(sp.val[0].key)} a ${dBR(sp.val.at(-1).key)} (${sp.nv.toLocaleString("pt-BR")} dias).`;
+  } else {
+    note.textContent=`Calibração com todo o período: ${dBR(use[0].key)} a ${dBR(use.at(-1).key)} (${use.length.toLocaleString("pt-BR")} dias).`;
+  }
+}
+function renderYears(yq){
+  const box=$("yearBox"); box.hidden=!yq.length; if(!yq.length) return;
+  const nEx=yq.filter(y=>y.excluded).length;
+  box.querySelector("summary").textContent=`Qualidade da série por ano · ${yq.length} anos${nEx?` · ${nEx} descartado${nEx>1?"s":""}`:" · nenhum descartado"}`;
+  if(nEx) box.open=true;
+  let t=`<tr><th>Ano</th><th>Dias</th><th>Falhas</th><th>Aguardando reinício</th><th>Dias sem FMA</th><th>Incêndios perdidos</th><th>Situação</th></tr>`;
+  for(const y of yq) t+=`<tr><td class="num">${y.year}</td><td class="num">${y.n}</td><td class="num">${y.falha}</td><td class="num">${y.reinicio}</td><td class="num">${fmt(y.pct,1)}%</td><td class="num">${y.firesLost}</td><td class="${y.excluded?"n":"y"}">${y.excluded?"descartado":"usado"}</td></tr>`;
+  $("tYears").innerHTML=t;
+}
+function lockResults(on,msg){
+  const st=$("step3");
+  [...st.children].forEach(el=>{ if(el.classList.contains("step-head")) return; if(el.id==="lockMsg"){ el.hidden=!on; if(on) el.textContent=msg; return; } if(on){ if(el.dataset.wasHidden===undefined) el.dataset.wasHidden=el.hidden?"1":""; el.hidden=true; } else if(el.dataset.wasHidden!==undefined){ el.hidden=el.dataset.wasHidden==="1"; delete el.dataset.wasHidden; } });
+  $("btnAuto").disabled=on;
+  if(on){ $("autoNote").textContent=""; $("periodLabel").textContent=""; }
+}
+function run(reAuto){
+  $("dataAlert").innerHTML="";
+  if(!state.met||!state.foc){ lockResults(true,!state.met&&!state.foc?"Carregue os dados meteorológicos e as ocorrências de incêndio da região.":!state.met?"Carregue os dados meteorológicos da mesma região e período das ocorrências.":"Carregue as ocorrências de incêndio (focos de calor) da mesma região e período dos dados meteorológicos."); $("dataSummary").innerHTML=""; state.Pc=null; return; }
+  const map={date:$("mDate").value,ur:$("mUR").value,pp:$("mPP").value,hour:$("mHour").value,utc:$("metUTC").checked,off:+$("tzOff").value};
+  { const off=+$("tzOff").value, h=+$("urHour").value; $("metNote").textContent=`O INMET publica a hora em UTC. Com a conversão para UTC${off<0?"−":"+"}${Math.abs(off)}, a UR das ${h} h locais é a leitura das ${((h-off)%24+24)%24} UTC e a chuva do dia é o acumulado das 14 h do dia anterior às 13 h locais.`; }
+  $("hourOpts").hidden=!map.hour && !state.met.rows.slice(0,50).some(r=>!isNaN(hourFromDate(r[map.date])));
+  const daily=buildDaily(state.met.rows,map,+$("urHour").value);
+  if(daily.noHour){
+    lockResults(true,`A planilha meteorológica é horária, mas não tem leituras de umidade relativa às 13 h locais (${(13-(+$("tzOff").value))%24} UTC no fuso escolhido). A FMA usa exclusivamente a UR das 13 h locais e não há substituição por média diária ou por outro horário. Estações convencionais do INMET (leituras às 00, 12 e 18 UTC) não atendem a esse requisito; use uma estação automática.`);
+    $("dataSummary").innerHTML=""; $("dataAlert").innerHTML=`<div class="alert bad">Sem leituras de UR às 13 h locais. Confira a coluna de hora, o fuso horário e a opção “Horários em UTC”.</div>`;
+    state.Pc=null; return;
+  }
+  if(daily.days.length<30){ $("dataAlert").innerHTML=`<div class="alert bad">Foram reconhecidos ${daily.days.length} dias na planilha meteorológica. Confira se as colunas de data, umidade e precipitação estão corretas.</div>`; return; }
+  computeFMA(daily.days,$("optRed").checked);
+  const maxPct=Math.min(100,Math.max(0,parseNum($("optMaxGap").value)));
+  const yq=yearQuality(daily.days,isNaN(maxPct)?10:maxPct), excl=new Set(yq.filter(y=>y.excluded).map(y=>y.year));
+  daily.days.forEach(d=>{ if(excl.has(d.year)&&d.status==="ok") d.status="ano"; });
+  const fc=fireCounts(state.foc.rows,{date:$("fDate").value,count:$("fCount").value,utc:$("focUTC").checked,off:+$("tzOff").value});
+  const minF=Math.max(1,+$("optMin").value||1);
+  const t0=daily.days[0].t,t1=daily.days.at(-1).t;
+  let inPeriod=0,outPeriod=0; for(const [t,n] of fc){ if(t>=t0&&t<=t1) inPeriod+=n; else outPeriod+=n; }
+  daily.days.forEach(d=>{d.focos=fc.get(d.t)||0; d.fire=d.focos>=minF;});
+  state.days=daily.days;
+  const use=daily.days.filter(d=>d.status==="ok");
+  yq.forEach(y=>y.firesLost=daily.days.filter(d=>d.year===y.year&&d.status!=="ok"&&d.fire).length);
+  renderYears(yq); state.yq=yq; state.excl=[...excl]; state.counts={inPeriod,nFire:0,lost:0};
+  const spanY=use.length/YEAR_DAYS;
+  if(spanY<MIN_CAL_YEARS*TOL){
+    lockResults(true, `Restam ${fmt(spanY,1)} ano(s) de dias com FMA calculada (${use.length.toLocaleString("pt-BR")} dias, entre ${dBR(daily.days[0].key)} e ${dBR(daily.days.at(-1).key)}), descontadas as falhas e os anos descartados. A avaliação e o ajuste da FMA exigem pelo menos ${MIN_CAL_YEARS} anos de dados, para que a escala represente a variação do clima entre anos e não apenas o período carregado. Para validar a escala ajustada são necessários cerca de ${Math.ceil(MIN_VAL_YEARS/VAL_SHARE)} anos (${MIN_CAL_YEARS} ou mais de calibração, com 75% dos dados, e ${MIN_VAL_YEARS} ou mais de validação, com 25%).`);
+    $("dataSummary").innerHTML=`Período <b>${dBR(daily.days[0].key)}</b> a <b>${dBR(daily.days.at(-1).key)}</b> · <b>${daily.days.length.toLocaleString("pt-BR")}</b> dias · <b>${use.length.toLocaleString("pt-BR")}</b> com FMA calculada`+(state.tzNote?`<br>${state.tzNote}`:"");
+    $("dataAlert").innerHTML=`<div class="alert bad">Período insuficiente: ${fmt(spanY,1)} ano(s) de dias válidos. Carregue pelo menos ${MIN_CAL_YEARS} anos de dados meteorológicos e de ocorrências da mesma região.</div>`;
+    state.Pc=null; return;
+  }
+  lockResults(false);
+  const sp=splitInfo(use);
+  const doSplit=sp.ok&&(state.splitPref||"split")==="split";
+  state.validate=doSplit; state.showVal=doSplit;
+  renderSplitNote(use,sp,doSplit);
+  daily.days.forEach(d=>d.part="");
+  if(doSplit){ state.cal=sp.cal; state.val=sp.val; sp.cal.forEach(d=>d.part="calibração"); sp.val.forEach(d=>d.part="validação"); }
+  else { state.cal=use; state.val=null; use.forEach(d=>d.part="completo"); }
+  state.Pc=prep(state.cal); state.Pv=state.val?prep(state.val):null;
+  state.rocC=roc(state.Pc); state.rocV=state.Pv?roc(state.Pv):null;
+  if(!state.Pv||!state.showVal) state.view="cal";
+  const nFire=use.filter(d=>d.fire).length, lost=daily.days.length-use.length;
+  state.counts={inPeriod,nFire,lost,use:use.length,total:daily.days.length,hourly:daily.hourly};
+  $("dataSummary").innerHTML=`Período <b>${dBR(daily.days[0].key)}</b> a <b>${dBR(daily.days.at(-1).key)}</b> · <b>${daily.days.length.toLocaleString("pt-BR")}</b> dias · <b>${use.length.toLocaleString("pt-BR")}</b> com FMA calculada${lost?` · <b>${lost.toLocaleString("pt-BR")}</b> desconsiderados`:""} · <b>${inPeriod.toLocaleString("pt-BR")}</b> ocorrências no período · <b>${nFire.toLocaleString("pt-BR")}</b> dias com incêndio analisados (${fmt(nFire/use.length*100,1)}%)`+(daily.hourly?` · dados horários agregados (UR das ${$("urHour").value} h${$("metUTC").checked?" locais, UTC"+(+$("tzOff").value<0?"−":"+")+Math.abs(+$("tzOff").value):""})`:"")+(state.tzNote&&($("metUTC").checked||$("focUTC").checked)?`<br>${state.tzNote}`:"");
+  const warn=[];
+  if(excl.size) warn.push(`${excl.size===1?"Ano descartado":"Anos descartados"} por excesso de dias sem FMA (mais de ${fmt(isNaN(maxPct)?10:maxPct,0)}%): ${[...excl].join(", ")}. Veja a qualidade da série por ano.`);
+  const lostF=yq.reduce((a,y)=>a+y.firesLost,0); if(lostF) warn.push(`${lostF} dia(s) com incêndio caíram em dias sem FMA calculada e ficaram fora da análise.`);
+  if(outPeriod) warn.push(`${outPeriod.toLocaleString("pt-BR")} ocorrências estão fora do período dos dados meteorológicos e foram ignoradas.`);
+  if(!fc.size) warn.push("Nenhuma data de ocorrência foi reconhecida. Confira a coluna de data da planilha de ocorrências.");
+  else if(state.Pc.F<MIN_FIRE_DAYS) warn.push(`${state.Pc.F} dias com incêndio ${state.Pv?"na calibração":"no período"}. Recomenda-se pelo menos ${MIN_FIRE_DAYS} para que a porcentagem por classe seja estável; considere um período mais longo.`);
+  if(state.Pv && state.Pv.F<10) warn.push(`Apenas ${state.Pv.F} dias com incêndio na validação: interprete a validação com cautela.`);
+  $("dataAlert").innerHTML=warn.map(w=>`<div class="alert warn">${w}</div>`).join("");
+  if(reAuto){ const O=evaluate(state.Pc,ORIGINAL,mode()); if(O.p1&&O.p2){state.adj=[...ORIGINAL]; state.autoInfo=null; $("autoNote").textContent="A escala original já atende às premissas; nenhum ajuste foi aplicado. Use “Ajustar automaticamente” para buscar uma escala com melhor desempenho mesmo assim.";} else doAuto(); }
+  renderScales(); renderResults();
+}
+
+// ---- resultados ----
+let chDays,chFire,chRoc;
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function renderResults(){
+  if(!state.Pc) return;
+  const m=mode();
+  const O=evaluate(state.Pc,ORIGINAL,m), A=evaluate(state.Pc,state.adj,m);
+  const Ov=state.Pv?evaluate(state.Pv,ORIGINAL,m):null, Av=state.Pv?evaluate(state.Pv,state.adj,m):null;
+  Object.assign(state,{O,A,Ov,Av});
+  const calTxt=state.Pv?`Calibração: ${dBR(state.cal[0].key)} a ${dBR(state.cal.at(-1).key)}`:"Período completo";
+  $("periodLabel").textContent=calTxt;
+  const same=state.adj.every((t,i)=>t===ORIGINAL[i]);
+  const ck=(ok,txt)=>`<li><span class="mk ${ok?"y":"n"}">${ok?"✓":"✗"}</span><span>${txt}</span></li>`;
+  const p1txt=r=>m==="peak"?`Dias: maior frequência em Médio (${fmt(r.pd[2],1)}%) e decréscimo para os extremos`:`Dias: número decrescente com a classe (Nulo ${fmt(r.pd[0],1)}% → Muito alto ${fmt(r.pd[4],1)}%)`;
+  const p2txt=r=>`Ocorrências: porcentagem crescente com a classe · ${fmt(r.high,1)}% em Alto + Muito alto`;
+  let v=`<div class="verdict ${O.p1&&O.p2?"ok":"bad"}"><span class="eyebrow">FMA original · ${calTxt.toLowerCase()}</span><h2>${O.p1&&O.p2?"A FMA original representa a realidade local":"A FMA original não representa bem a realidade local"}</h2><ul class="checks">${ck(O.p1,p1txt(O))}${ck(O.p2,p2txt(O))}</ul></div>`;
+  if(!(O.p1&&O.p2)||!same) v+=`<div class="verdict ${A.p1&&A.p2?"ok":""}" style="margin-top:12px"><span class="eyebrow">FMA ajustada · ${state.adj.map(fmtT).join(" | ")}</span><h2>${A.p1&&A.p2?"A escala ajustada atende às duas premissas":(A.p1?"A escala ajustada atende à premissa dos dias":"A escala ajustada ainda não atende às premissas")}</h2><ul class="checks">${ck(A.p1,p1txt(A))}${ck(A.p2,p2txt(A))}</ul></div>`;
+  $("verdict").innerHTML=v;
+
+  const card=(r,title,adj,base)=>{
+    const dl=(d,dec,suf="",inv=false)=>{ if(!base||isNaN(d))return""; const good=inv?d<-1e-9:d>1e-9, bad=inv?d>1e-9:d<-1e-9; return `<span class="delta ${good?"up":bad?"down":""}">${d>0?"+":""}${fmt(d,dec)}${suf}</span>`; };
+    return `<div class="mcard ${adj?"adj":""}"><h3>${title}</h3>
+    <div class="kv"><div><span class="eyebrow">Skill score</span><span class="big">${fmt(r.ss,4)}</span>${dl(base?r.ss-base.ss:0,4)}</div><div><span class="eyebrow">Porcentagem de sucesso</span><span class="big">${fmt(r.ps,2)}%</span>${dl(base?r.ps-base.ps:0,2," p.p.")}</div>
+    <div><span class="eyebrow">POD</span><span class="mid">${fmt(r.pod,1)}%</span>${dl(base?r.pod-base.pod:0,1," p.p.")}</div><div><span class="eyebrow">POFD</span><span class="mid">${fmt(r.pofd,1)}%</span>${dl(base?r.pofd-base.pofd:0,1," p.p.",true)}</div></div>
+    <div class="cont"><div class="h"></div><div class="h">Com incêndio</div><div class="h">Sem incêndio</div>
+      <div class="h">Previsto (Médio+)</div><div class="v">a = ${r.a}</div><div class="v">b = ${r.b}</div>
+      <div class="h">Não previsto</div><div class="v">c = ${r.c}</div><div class="v">d = ${r.d}</div></div>
+    <p class="muted" style="font-size:.8rem">N = ${r.N} · G = ${r.G} · H = ${fmt(r.H,1)}${base?" · variações em relação à original":""}</p></div>`;
+  };
+  $("metrics").innerHTML=card(O,"FMA original",false)+card(A,"FMA ajustada",true,O);
+
+  // validação
+  const showV=!!(state.Pv&&state.showVal);
+  $("valBlock").hidden=!showV; $("segWrap").hidden=!showV;
+  if(showV){
+    $("valPeriod").textContent=`${dBR(state.val[0].key)} a ${dBR(state.val.at(-1).key)} · ${state.Pv.N} dias · ${state.Pv.F} dias com incêndio · AC = ${fmt(state.rocV?.auc,3)}`;
+    const yn=b=>`<td class="${b?"y":"n"}">${b?"atende":"não atende"}</td>`;
+    let t=`<tr><th>Escala</th><th>SS</th><th>PS (%)</th><th>POD (%)</th><th>POFD (%)</th><th>Premissa dos dias</th><th>Premissa das ocorrências</th></tr>`;
+    for(const [n,r] of [["FMA original",Ov],["FMA ajustada",Av]]) t+=`<tr><td>${n}</td><td class="num">${fmt(r.ss,4)}</td><td class="num">${fmt(r.ps,2)}</td><td class="num">${fmt(r.pod,1)}</td><td class="num">${fmt(r.pofd,1)}</td>${yn(r.p1)}${yn(r.p2)}</tr>`;
+    $("tVal").innerHTML=t;
+  }
+  $("segCal").setAttribute("aria-pressed",state.view==="cal"); $("segVal").setAttribute("aria-pressed",state.view==="val");
+  $("noteDays").textContent=m==="peak"?"Esperado: maior frequência em “Médio”, decrescendo para os extremos.":"Esperado: número de dias decrescente da classe Nulo para Muito alto.";
+  const [vo,va]=state.view==="val"&&Ov?[Ov,Av]:[O,A];
+  // tabela por classe
+  let t=`<tr><th>Classe</th><th>Dias orig.</th><th>% orig.</th><th>% inc. orig.</th><th>Dias ajust.</th><th>% ajust.</th><th>% inc. ajust.</th><th>Taxa ajust.</th></tr>`;
+  CLASSES.forEach((c,i)=>{ const rate=va.cnt.d[i]?va.cnt.f[i]/va.cnt.d[i]*100:NaN;
+    t+=`<tr><td><span class="cls"><i style="background:var(--c${i})"></i>${c}</span></td><td class="num">${vo.cnt.d[i]}</td><td class="num">${fmt(vo.pd[i],1)}</td><td class="num">${fmt(vo.pf[i],1)}</td><td class="num">${va.cnt.d[i]}</td><td class="num">${fmt(va.pd[i],1)}</td><td class="num">${fmt(va.pf[i],1)}</td><td class="num">${fmt(rate,1)}%</td></tr>`;});
+  $("tClasses").innerHTML=t+`<tr><td colspan="8" class="muted" style="text-align:left;white-space:normal;font-size:.8rem">% inc. = parcela dos dias com incêndio que caiu na classe (como no gráfico). Taxa = dias com incêndio ÷ dias da classe.</td></tr>`;
+  drawCharts(vo,va);
+}
+$("optSplit").addEventListener("change",()=>{ state.splitPref=$("optSplit").value; run(true); });
+$("segCal").addEventListener("click",()=>{state.view="cal";renderResults();});
+$("segVal").addEventListener("click",()=>{state.view="val";renderResults();});
+
+function fitTxt(label,y){const f=quadFit(y); const s=v=>(v<0?"− ":"+ ")+fmt(Math.abs(v),4); return `${label}: y = ${fmt(f.a,4)}x² ${s(f.b)}x ${s(f.c)} · R² = ${fmt(f.r2,4)}`;}
+function drawCharts(O,A){
+  if(typeof Chart==="undefined") return;
+  const ink=css("--ink"),muted=css("--muted"),line=css("--line"),orig=css("--orig"),acc=css("--accent");
+  const base=(yLab)=>({responsive:true,maintainAspectRatio:false,animation:false,
+    plugins:{legend:{labels:{color:ink}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y.toLocaleString("pt-BR",{maximumFractionDigits:1})}%`}}},
+    scales:{x:{ticks:{color:muted},grid:{display:false},border:{color:line},title:{display:true,text:"Escala de perigo",color:muted}},
+            y:{beginAtZero:true,ticks:{color:muted},grid:{color:line},border:{display:false},title:{display:true,text:yLab,color:muted}}}});
+  const ds=(a,b)=>[{label:"FMA original",data:a,backgroundColor:orig,borderRadius:3},{label:"FMA ajustada",data:b,backgroundColor:acc,borderRadius:3}];
+  chDays&&chDays.destroy(); chFire&&chFire.destroy(); chRoc&&chRoc.destroy();
+  chDays=new Chart($("chDays"),{type:"bar",data:{labels:CLASSES,datasets:ds(O.pd,A.pd)},options:base("Número de dias (%)")});
+  chFire=new Chart($("chFire"),{type:"bar",data:{labels:CLASSES,datasets:ds(O.pf,A.pf)},options:base("Dias com incêndio (%)")});
+  $("fitDays").innerHTML=`<span>${fitTxt("Original",O.pd)}</span><span>${fitTxt("Ajustada",A.pd)}</span>`;
+  $("fitFire").innerHTML=`<span>${fitTxt("Original",O.pf)}</span><span>${fitTxt("Ajustada",A.pf)}</span>`;
+  // ROC
+  const isVal=state.view==="val"&&state.Pv, P=isVal?state.Pv:state.Pc, R=isVal?state.rocV:state.rocC;
+  if(!R){ $("rocTxt").textContent="Sem dias com e sem incêndio suficientes para a curva ROC."; return; }
+  const po=rocPoint(P,ORIGINAL[1]), pa=rocPoint(P,state.adj[1]), pc=rocPoint(P,state.rocC.cut);
+  chRoc=new Chart($("chRoc"),{type:"scatter",data:{datasets:[
+    {label:`Curva ROC (AC = ${fmt(R.auc,3)})`,data:R.curve,showLine:true,borderColor:ink,backgroundColor:ink,pointRadius:0,borderWidth:1.8,order:3},
+    {label:"Referência (AC = 0,5)",data:[{x:0,y:0},{x:1,y:1}],showLine:true,borderColor:line,borderDash:[5,4],pointRadius:0,borderWidth:1,order:4},
+    {label:"Corte da original (Médio > "+fmtT(ORIGINAL[1])+")",data:[po],backgroundColor:orig,pointRadius:7,pointStyle:"rectRot",order:1},
+    {label:"Corte da ajustada (Médio > "+fmtT(state.adj[1])+")",data:[pa],backgroundColor:acc,pointRadius:7,pointStyle:"rectRot",order:1},
+    {label:"Corte ótimo pelo índice de união (FMA > "+fmt(state.rocC.cut,1)+")",data:[pc],backgroundColor:"transparent",borderColor:acc,borderWidth:2,pointRadius:8,order:0}
+  ]},options:{responsive:true,maintainAspectRatio:false,animation:false,
+    plugins:{legend:{labels:{color:ink,boxWidth:12,font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: 1 − Sp ${fmt(c.parsed.x,2)} · Se ${fmt(c.parsed.y,2)}`}}},
+    scales:{x:{min:0,max:1,ticks:{color:muted},grid:{color:line},title:{display:true,text:"1 − especificidade (POFD)",color:muted}},
+            y:{min:0,max:1,ticks:{color:muted},grid:{color:line},title:{display:true,text:"Sensibilidade (POD)",color:muted}}}}});
+  $("rocTxt").innerHTML=`<span>${isVal?"Validação":(state.Pv?"Calibração":"Período completo")}: área sob a curva (AC) = ${fmt(R.auc,3)}</span><span>Ponto de corte pelo índice de união${isVal?" (definido na calibração)":""}: FMA &gt; ${fmt(state.rocC.cut,2)} · Se = ${fmt(state.rocC.se,3)} · Sp = ${fmt(state.rocC.sp,3)} · IU = ${fmt(state.rocC.iu,3)}</span>`;
+}
+try{ matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>state.O&&renderResults()); new MutationObserver(()=>state.O&&renderResults()).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]}); }catch(e){}
+
+// ---- exportar ----
+$("btnCopyTable").addEventListener("click",()=>{ const [O,A]=state.view==="val"&&state.Ov?[state.Ov,state.Av]:[state.O,state.A]; if(!O)return;
+  let s="Classe\tDias (orig.)\t% dias (orig.)\t% dias incêndio (orig.)\tDias (ajust.)\t% dias (ajust.)\t% dias incêndio (ajust.)\n";
+  CLASSES.forEach((c,i)=>s+=[c,O.cnt.d[i],fmt(O.pd[i],2),fmt(O.pf[i],2),A.cnt.d[i],fmt(A.pd[i],2),fmt(A.pf[i],2)].join("\t")+"\n");
+  copy(s,"Tabela copiada"); });
+$("btnCopyMetrics").addEventListener("click",()=>{ if(!state.O)return;
+  const row=(per,n,T,r,R)=>[per,n,T.map(fmtT).join(" | "),fmt(r.ss,4),fmt(r.ps,2),fmt(r.pod,2),fmt(r.pofd,2),r.a,r.b,r.c,r.d,fmt(R?.auc,3)].join("\t")+"\n";
+  let s="Período\tEscala\tLimites\tSS\tPS (%)\tPOD (%)\tPOFD (%)\ta\tb\tc\td\tAC (ROC)\n";
+  const per=state.Pv?"Calibração":"Completo";
+  s+=row(per,"FMA original",ORIGINAL,state.O,state.rocC)+row(per,"FMA ajustada",state.adj,state.A,state.rocC);
+  if(state.Pv&&state.showVal) s+=row("Validação","FMA original",ORIGINAL,state.Ov,state.rocV)+row("Validação","FMA ajustada",state.adj,state.Av,state.rocV);
+  if(state.rocC) s+=`\nPonto de corte (índice de união)\tFMA > ${fmt(state.rocC.cut,2)}\n`;
+  copy(s,"Indicadores copiados"); });
+$("btnCopySeries").addEventListener("click",()=>{ if(!state.days)return;
+  let s="Data\tUR (%)\tPrecipitação (mm)\tFMA\tClasse original\tClasse ajustada\tOcorrências\tDia com incêndio\tPeríodo\tSituação\n";
+  const SIT={ok:"analisado",falha:"falha (sem UR ou chuva)",reinicio:"aguardando reinício da FMA",ano:"ano descartado"};
+  for(const d of state.days){ const ok=!isNaN(d.fma); s+=[dBR(d.key),isNaN(d.ur)?"":fmt(d.ur,1),isNaN(d.pp)?"":fmt(d.pp,1),ok?fmt(d.fma,2):"",ok?CLASSES[classOf(d.fma,ORIGINAL)]:"",ok?CLASSES[classOf(d.fma,state.adj)]:"",d.focos,d.fire?"sim":"não",d.status!=="ok"?"":(d.part||""),SIT[d.status]].join("\t")+"\n"; }
+  copy(s,`Série de ${state.days.length} dias copiada`); });
+$("btnTplMet").addEventListener("click",()=>copy("data;UR_13h;precipitacao_mm\n01/01/2020;72;0\n02/01/2020;65,5;3,2\n","Modelo copiado"));
+$("btnTplFoc").addEventListener("click",()=>copy("datahora;satelite\n2020/08/14 17:20:00;AQUA_M-T\n","Modelo copiado"));
+
+renderScales();
+loadSample();
+</script>
+
+<script>
+// ======== relatório em Word (.docx) ========
+(function(){
+  const btn=$("btnReport"), st=$("reportStatus");
+  // Download: no Claude usa a capacidade "downloads"; hospedada em outro site, usa o download comum do navegador.
+  let dl=null, ready=false;
+  const NO_DL="Neste modo de acesso não é possível baixar arquivos. Use os botões “Copiar” para levar a tabela, os indicadores e a série diária ao Excel.";
+  function browserSave({filename,data}){
+    const blob=data instanceof Blob?data:new Blob([data]);
+    const url=URL.createObjectURL(blob), a=document.createElement("a");
+    a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    return Promise.resolve({status:"saved"});
+  }
+  (async()=>{
+    if(window.claude?.use){ try{ const d=await window.claude.use("downloads"); if(d) dl={save:o=>d.save(o)}; }catch(e){ dl=null; } }
+    else dl={save:browserSave};
+    ready=true;
+    if(!dl){ btn.disabled=true; st.textContent=NO_DL; } })();
+
+  const PAL={orig:"#7d9283",adj:"#c2410c",ink:"#1d2a22",muted:"#5b685f",grid:"#d9ded6"};
+  const n2=(v,d=2)=>fmt(v,d);
+  function chartPNG(cfg,w=900,h=480){
+    const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+    const bg={id:"bg",beforeDraw(c){const x=c.ctx; x.save(); x.fillStyle="#ffffff"; x.fillRect(0,0,c.width,c.height); x.restore();}};
+    cfg.options=Object.assign({responsive:false,animation:false,devicePixelRatio:1},cfg.options||{});
+    cfg.plugins=[bg];
+    const ch=new Chart(cv,cfg); const url=cv.toDataURL("image/png"); ch.destroy();
+    const b64=url.split(",")[1], bin=atob(b64), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+    return u;
+  }
+  const axes=(yLab,xLab="Classe de perigo")=>({x:{ticks:{color:PAL.muted,font:{size:15}},grid:{display:false},title:{display:true,text:xLab,color:PAL.muted,font:{size:15}}},
+    y:{beginAtZero:true,ticks:{color:PAL.muted,font:{size:15}},grid:{color:PAL.grid},title:{display:true,text:yLab,color:PAL.muted,font:{size:15}}}});
+  function barPNG(a,b,yLab){
+    return chartPNG({type:"bar",data:{labels:CLASSES,datasets:[{label:"FMA original",data:a,backgroundColor:PAL.orig},{label:"FMA ajustada",data:b,backgroundColor:PAL.adj}]},
+      options:{plugins:{legend:{labels:{color:PAL.ink,font:{size:15}}}},scales:axes(yLab)}});
+  }
+  function rocPNG(P,R){
+    const po=rocPoint(P,ORIGINAL[1]), pa=rocPoint(P,state.adj[1]), pc=rocPoint(P,state.rocC.cut);
+    return chartPNG({type:"scatter",data:{datasets:[
+      {label:`Curva ROC (AC = ${n2(R.auc,3)})`,data:R.curve,showLine:true,borderColor:PAL.ink,pointRadius:0,borderWidth:2},
+      {label:"Referência (AC = 0,5)",data:[{x:0,y:0},{x:1,y:1}],showLine:true,borderColor:PAL.grid,borderDash:[6,5],pointRadius:0,borderWidth:1.5},
+      {label:"Corte da original",data:[po],backgroundColor:PAL.orig,pointRadius:9,pointStyle:"rectRot"},
+      {label:"Corte da ajustada",data:[pa],backgroundColor:PAL.adj,pointRadius:9,pointStyle:"rectRot"},
+      {label:`Corte ótimo (FMA > ${n2(state.rocC.cut,1)})`,data:[pc],backgroundColor:"rgba(0,0,0,0)",borderColor:PAL.adj,borderWidth:2.5,pointRadius:10}]},
+      options:{plugins:{legend:{labels:{color:PAL.ink,font:{size:14}}}},scales:{x:{min:0,max:1,ticks:{color:PAL.muted,font:{size:14}},grid:{color:PAL.grid},title:{display:true,text:"1 − especificidade (POFD)",color:PAL.muted,font:{size:15}}},y:{min:0,max:1,ticks:{color:PAL.muted,font:{size:14}},grid:{color:PAL.grid},title:{display:true,text:"Sensibilidade (POD)",color:PAL.muted,font:{size:15}}}}}},800,560);
+  }
+
+  async function build(){
+    const D=window.docx;
+    const {Document,Packer,Paragraph,TextRun,HeadingLevel,Table,TableRow,TableCell,WidthType,AlignmentType,ImageRun,BorderStyle,ShadingType}=D;
+    const FONT="Calibri";
+    const P=(text,o={})=>new Paragraph({spacing:{after:120,line:300},alignment:o.align||AlignmentType.JUSTIFIED,children:(Array.isArray(text)?text:[text]).map(t=>typeof t==="string"?new TextRun({text:t,font:FONT,size:22}):t),...(o.p||{})});
+    const B=t=>new TextRun({text:t,bold:true,font:FONT,size:22});
+    const H1=t=>new Paragraph({heading:HeadingLevel.HEADING_1,spacing:{before:320,after:140},children:[new TextRun({text:t,font:FONT,bold:true,size:30,color:"1D2A22"})]});
+    const H2=t=>new Paragraph({heading:HeadingLevel.HEADING_2,spacing:{before:220,after:100},children:[new TextRun({text:t,font:FONT,bold:true,size:25,color:"1D2A22"})]});
+    const CAP=t=>new Paragraph({spacing:{before:80,after:200},alignment:AlignmentType.LEFT,children:[new TextRun({text:t,font:FONT,size:19,italics:true,color:"5B685F"})]});
+    const cell=(t,o={})=>new TableCell({children:[new Paragraph({alignment:o.left?AlignmentType.LEFT:AlignmentType.CENTER,children:[new TextRun({text:String(t),font:FONT,size:19,bold:!!o.head})]})],
+      shading:o.head?{type:ShadingType.CLEAR,fill:"E8ECE5",color:"auto"}:undefined,margins:{top:50,bottom:50,left:80,right:80}});
+    const TBL=(head,rows)=>new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[new TableRow({tableHeader:true,children:head.map((h,i)=>cell(h,{head:true,left:i===0}))}),...rows.map(r=>new TableRow({children:r.map((c,i)=>cell(c,{left:i===0}))}))]});
+    const IMG=(u,w,h)=>new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:120},children:[new ImageRun({data:u,transformation:{width:w,height:h}})]});
+    const thr=T=>[`≤ ${fmtT(T[0])}`,`${fmtT(T[0]+0.1)} a ${fmtT(T[1])}`,`${fmtT(T[1]+0.1)} a ${fmtT(T[2])}`,`${fmtT(T[2]+0.1)} a ${fmtT(T[3])}`,`> ${fmtT(T[3])}`];
+    const m=mode(), O=state.O, A=state.A, Ov=state.Ov, Av=state.Av, C=state.counts||{}, V=!!(state.Pv&&state.showVal);
+    const off=+$("tzOff").value, tz=`UTC${off<0?"−":"+"}${Math.abs(off)}`;
+    const per=state.Pv?`calibração (${dBR(state.cal[0].key)} a ${dBR(state.cal.at(-1).key)})`:`período completo (${dBR(state.cal[0].key)} a ${dBR(state.cal.at(-1).key)})`;
+    const yes=b=>b?"atende":"não atende";
+    const premTxt=m==="peak"?"maior número de dias na classe Médio, diminuindo gradualmente para as classes extremas (Tetto, 2012)":"número de dias decrescente com o aumento da classe de perigo (Nunes et al., 2010)";
+    const kids=[];
+    const today=new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"});
+    kids.push(new Paragraph({spacing:{after:80},children:[new TextRun({text:"Avaliação e ajuste da Fórmula de Monte Alegre (FMA)",font:FONT,bold:true,size:36,color:"1D2A22"})]}));
+    kids.push(new Paragraph({spacing:{after:240},children:[new TextRun({text:`Relatório gerado em ${today} pela Calculadora de Ajuste da FMA`,font:FONT,size:20,color:"5B685F"})]}));
+    if(state.sample) kids.push(P([B("Atenção: "),"este relatório foi gerado com os dados de exemplo fictícios da calculadora e não representa nenhuma região real."]));
+
+    // 1 Dados
+    kids.push(H1("1. Dados utilizados"));
+    const fm=state.files.met.map(f=>f.name).join("; "), ff=state.files.foc.map(f=>f.name).join("; ");
+    kids.push(P([B("Dados meteorológicos: "),fm||"—"]));
+    kids.push(P([B("Ocorrências de incêndio: "),ff||"—"]));
+    kids.push(P(`A série meteorológica abrange ${C.total?.toLocaleString("pt-BR")} dias, de ${dBR(state.days[0].key)} a ${dBR(state.days.at(-1).key)}. Desses, ${C.use?.toLocaleString("pt-BR")} dias tiveram a FMA calculada e ${C.lost?.toLocaleString("pt-BR")} foram desconsiderados por falhas, por aguardarem o reinício do cálculo ou por pertencerem a anos descartados. Foram registradas ${C.inPeriod?.toLocaleString("pt-BR")} ocorrências no período, resultando em ${C.nFire?.toLocaleString("pt-BR")} dias com incêndio analisados. Considerou-se dia com incêndio aquele com pelo menos ${Math.max(1,+$("optMin").value||1)} ocorrência(s).`));
+    kids.push(P(`Fuso horário adotado: ${tz}. ${$("metUTC").checked?"Os horários dos dados meteorológicos, publicados em UTC, foram convertidos para o horário local; a umidade relativa usada é a leitura das 13 h locais e a precipitação do dia é o acumulado das 14 h do dia anterior às 13 h locais. ":""}${$("focUTC").checked?"Os horários das ocorrências, publicados em UTC, foram convertidos para o horário local antes do agrupamento por dia. ":""}${state.tzNote||""}`));
+    if(state.yq?.length){
+      kids.push(H2("Qualidade da série por ano"));
+      kids.push(TBL(["Ano","Dias","Falhas","Aguardando reinício","Dias sem FMA (%)","Incêndios perdidos","Situação"],state.yq.map(y=>[y.year,y.n,y.falha,y.reinicio,n2(y.pct,1),y.firesLost,y.excluded?"descartado":"usado"])));
+      kids.push(CAP(`Tabela 1. Qualidade da série meteorológica por ano. Anos com mais de ${$("optMaxGap").value}% dos dias sem FMA foram descartados.`));
+    }
+
+    // 2 Método
+    kids.push(H1("2. Metodologia"));
+    kids.push(P(["O perigo de incêndio foi calculado pela Fórmula de Monte Alegre (Soares, 1972): FMA = Σ (100/H",new TextRun({text:"i",subScript:true,font:FONT,size:22}),"), em que H é a umidade relativa do ar às 13 h (%). A precipitação diária corresponde ao acumulado das 14 h do dia anterior às 13 h do dia. ",$("optRed").checked?"A precipitação diária foi aplicada como fator restritivo: até 2,4 mm, sem alteração; de 2,5 a 4,9 mm, redução de 30% na FMA do dia anterior; de 5,0 a 9,9 mm, redução de 60%; de 10,0 a 12,9 mm, redução de 80%, somando-se 100/H do dia; acima de 12,9 mm, a FMA é zerada e o somatório recomeça no dia seguinte.":"Apenas a precipitação acima de 12,9 mm foi aplicada, zerando a FMA e reiniciando o somatório no dia seguinte."]));
+    kids.push(P("As falhas não foram preenchidas. Um dia sem umidade relativa das 13 h ou sem precipitação foi desconsiderado, assim como os dias seguintes, até o primeiro dia com chuva acima de 12,9 mm, quando a FMA é zerada e o cálculo recomeça. O início da série seguiu a mesma regra. "+`Anos com mais de ${$("optMaxGap").value}% dos dias sem FMA foram descartados integralmente.`));
+    kids.push(P(`A aderência da escala foi avaliada por duas premissas: (1) distribuição dos dias com ${premTxt}; e (2) porcentagem dos dias com incêndio crescente com a classe de perigo, concentrando as ocorrências nas classes Alto e Muito alto.`));
+    kids.push(P("A eficiência foi avaliada pela tabela de contingência, considerando as classes Nulo e Pequeno como indicativas de ausência de incêndio e as classes Médio, Alto e Muito alto como indicativas de incêndio (Sampaio e Soares, 2000; Nunes, Soares e Batista, 2007). Sendo a = previsto e ocorreu, b = previsto e não ocorreu, c = não previsto e ocorreu, d = não previsto e não ocorreu e N o total de dias: G = a + d; H = [(a+b)(a+c) + (c+d)(b+d)]/N; skill score SS = (G − H)/(N − H); porcentagem de sucesso PS = G/N × 100; probabilidade de detecção POD = a/(a + c); e probabilidade de falsa detecção POFD = b/(b + d) (Santos et al., 2021)."));
+    kids.push(P("A capacidade da FMA, como variável contínua, de discriminar dias com e sem incêndio foi avaliada pela área sob a curva ROC (AC). O ponto de corte ótimo foi definido pelo índice de união, IU(c) = |Se(c) − AC| + |Sp(c) − AC|, minimizado (Unal, 2017; Santos et al., 2021)."+($("optCut").checked?" No ajuste, exigiu-se que esse ponto de corte ficasse dentro da classe Médio.":"")));
+    kids.push(P("O ajuste da escala consistiu na alteração dos limites entre as classes de perigo. A busca automática testou combinações de limites e priorizou, nesta ordem, o atendimento às premissas, o maior skill score e a menor alteração em relação à escala original."+(state.Pv?" Os dias com FMA calculada foram divididos em ordem cronológica em calibração (75% iniciais) e validação (25% finais) (Wilks, 2011): o ajuste usou apenas os dados de calibração"+(V?" e os dados de validação foram usados para verificar o desempenho da escala ajustada em dados independentes.":", e os dados de validação foram reservados."):" A série não teve extensão suficiente para a separação em calibração e validação; a avaliação e o ajuste usaram o período completo.")));
+
+    // 3 Escalas
+    kids.push(H1("3. Escalas de perigo"));
+    kids.push(TBL(["Classe de perigo","FMA original","FMA ajustada"],CLASSES.map((c,i)=>[c,thr(ORIGINAL)[i],thr(state.adj)[i]])));
+    kids.push(CAP("Tabela 2. Limites das classes de perigo da FMA original (Soares, 1972) e da FMA ajustada."));
+
+    // 4 Resultados
+    kids.push(H1("4. Resultados"));
+    kids.push(P(`Com os dados de ${per}, a FMA original ${O.p1&&O.p2?"atendeu":"não atendeu"} às premissas de aderência (premissa 1: ${yes(O.p1)}; premissa 2: ${yes(O.p2)}), com ${n2(O.pd[3]+O.pd[4],1)}% dos dias nas classes Alto e Muito alto e ${n2(O.high,1)}% dos dias com incêndio nessas classes. A escala ajustada ${A.p1&&A.p2?"atendeu às duas premissas":A.p1?"atendeu à premissa 1":"não atendeu às premissas"} (premissa 1: ${yes(A.p1)}; premissa 2: ${yes(A.p2)}), com ${n2(A.pd[3]+A.pd[4],1)}% dos dias nas classes Alto e Muito alto e ${n2(A.high,1)}% dos dias com incêndio nessas classes.`));
+    kids.push(H2("Indicadores de desempenho"));
+    const mrow=(per,n,r)=>[per,n,n2(r.ss,4),n2(r.ps,2),n2(r.pod,1),n2(r.pofd,1),r.a,r.b,r.c,r.d];
+    const mrows=[mrow(state.Pv?"Calib.":"Completo","Original",O),mrow(state.Pv?"Calib.":"Completo","Ajustada",A)];
+    if(V) mrows.push(mrow("Valid.","Original",Ov),mrow("Valid.","Ajustada",Av));
+    kids.push(TBL(["Período","FMA","SS","PS (%)","POD (%)","POFD (%)","a","b","c","d"],mrows));
+    kids.push(CAP("Tabela 3. Skill score (SS), porcentagem de sucesso (PS), probabilidades de detecção (POD) e de falsa detecção (POFD) e tabela de contingência da FMA original e ajustada"+(V?" (Calib. = calibração; Valid. = validação).":(state.Pv?" (Calib. = calibração).":"."))));
+    kids.push(P(`A variação do skill score entre a escala original e a ajustada foi de ${n2(A.ss-O.ss,4)} e a da porcentagem de sucesso, de ${n2(A.ps-O.ps,2)} pontos percentuais${V?` na calibração; na validação, as variações foram de ${n2(Av.ss-Ov.ss,4)} e ${n2(Av.ps-Ov.ps,2)} pontos percentuais, respectivamente`:(state.Pv?" na calibração":"")}.`+(V?` Na validação, a escala ajustada ${Av.p1?"atendeu":"não atendeu"} à premissa 1 e ${Av.p2?"atendeu":"não atendeu"} à premissa 2.`:"")));
+
+    const tbl=(o,a,lab,num)=>{
+      kids.push(TBL(["Classe","Dias (orig.)","% dias (orig.)","% incêndios (orig.)","Dias (ajust.)","% dias (ajust.)","% incêndios (ajust.)"],CLASSES.map((c,i)=>[c,o.cnt.d[i],n2(o.pd[i],1),n2(o.pf[i],1),a.cnt.d[i],n2(a.pd[i],1),n2(a.pf[i],1)])));
+      kids.push(CAP(`Tabela ${num}. Número e porcentagem de dias e porcentagem dos dias com incêndio por classe de perigo da FMA original e ajustada — ${lab}.`));
+    };
+    let fig=1, tn=4;
+    const figs=(o,a,lab)=>{
+      kids.push(IMG(barPNG(o.pd,a.pd,"Número de dias (%)"),560,299));
+      const fo=quadFit(o.pd), fa=quadFit(a.pd);
+      kids.push(CAP(`Figura ${fig++}. Distribuição dos dias por classe de perigo da FMA original e ajustada — ${lab}. Ajuste polinomial: original R² = ${n2(fo.r2,4)}; ajustada R² = ${n2(fa.r2,4)}.`));
+      kids.push(IMG(barPNG(o.pf,a.pf,"Dias com incêndio (%)"),560,299));
+      const go=quadFit(o.pf), ga=quadFit(a.pf);
+      kids.push(CAP(`Figura ${fig++}. Distribuição dos dias com incêndio por classe de perigo da FMA original e ajustada — ${lab}. Ajuste polinomial: original R² = ${n2(go.r2,4)}; ajustada R² = ${n2(ga.r2,4)}.`));
+    };
+    kids.push(H2(state.Pv?"Distribuição por classe — calibração":"Distribuição por classe"));
+    tbl(O,A,state.Pv?"calibração":"período completo",tn++); figs(O,A,state.Pv?"calibração":"período completo");
+    if(V){ kids.push(H2("Distribuição por classe — validação")); tbl(Ov,Av,"validação",tn++); figs(Ov,Av,"validação"); }
+    if(state.rocC){
+      kids.push(H2("Curva ROC"));
+      kids.push(P(`A área sob a curva ROC foi de ${n2(state.rocC.auc,3)}${V&&state.rocV?` na calibração e ${n2(state.rocV.auc,3)} na validação`:""}. O ponto de corte ótimo pelo índice de união foi FMA > ${n2(state.rocC.cut,2)} (sensibilidade = ${n2(state.rocC.se,3)}; especificidade = ${n2(state.rocC.sp,3)}), ${state.rocC.cut>state.adj[1]&&state.rocC.cut<=state.adj[2]?"dentro":"fora"} da classe Médio da escala ajustada.`));
+      kids.push(IMG(rocPNG(state.Pc,state.rocC),440,308));
+      kids.push(CAP(`Figura ${fig++}. Curva ROC da FMA${state.Pv?" (calibração)":""}, com os pontos de corte entre as classes Pequeno e Médio das escalas original e ajustada e o ponto de corte ótimo pelo índice de união.`));
+    }
+
+    kids.push(H1("5. Considerações"));
+    kids.push(P(O.p1&&O.p2?"A escala original da FMA representou adequadamente a distribuição do perigo e das ocorrências de incêndio na região, segundo as premissas adotadas.":`A escala original da FMA não representou adequadamente a realidade local. ${A.p1&&A.p2?"A escala ajustada atendeu às premissas adotadas":"A escala ajustada melhorou a aderência às premissas"} e apresentou skill score de ${n2(A.ss,4)}, frente a ${n2(O.ss,4)} da escala original${V?`, mantendo na validação skill score de ${n2(Av.ss,4)} (original: ${n2(Ov.ss,4)})`:""}.`));
+    kids.push(P("Os resultados dependem da qualidade e da extensão das séries meteorológicas e de ocorrências utilizadas. Recomenda-se reavaliar a escala periodicamente e, quando forem usados focos de calor, considerar que eles não equivalem a registros de ocorrência de incêndio."));
+
+    kids.push(H1("Referências"));
+    ["NUNES, J. R. S.; SOARES, R. V.; BATISTA, A. C. Ajuste da Fórmula de Monte Alegre Alterada (FMA+) para o estado do Paraná. Floresta, v. 37, n. 1, 2007.",
+     "NUNES, J. R. S. et al. Desempenho da Fórmula de Monte Alegre (FMA) e da Fórmula de Monte Alegre Alterada (FMA+) no distrito florestal de Monte Alegre. Floresta, v. 40, n. 2, p. 319-326, 2010.",
+     "SAMPAIO, O. B.; SOARES, R. V. “Skill Score”: um método para análise da eficiência de índices de incêndios florestais. Floresta, v. 30, n. 1/2, 2000.",
+     "SANTOS, J. F. L. et al. Adaptation of the Fórmula de Monte Alegre for the danger prediction of forest fires in the central region of São Paulo state. Ciência Florestal, v. 31, n. 4, p. 1867-1884, 2021. DOI: 10.5902/1980509852851.",
+     "SOARES, R. V. Índices de perigo de incêndio. Floresta, v. 3, n. 3, p. 19-40, 1972.",
+     "TETTO, A. F. Comportamento histórico dos incêndios florestais na Fazenda Monte Alegre no período de 1965 a 2009. Tese (Doutorado) – Universidade Federal do Paraná, 2012.",
+     "UNAL, I. Defining an optimal cut-point value in ROC analysis: an alternative approach. Computational and Mathematical Methods in Medicine, 2017, 3762651.",
+     "WILKS, D. S. Statistical methods in the atmospheric sciences. 3. ed. Oxford: Elsevier, 2011."].forEach(r=>kids.push(new Paragraph({spacing:{after:100},children:[new TextRun({text:r,font:FONT,size:20})]})));
+
+    const doc=new Document({creator:"Calculadora de Ajuste da FMA",title:"Avaliação e ajuste da FMA",
+      styles:{default:{document:{run:{font:FONT,size:22}}}},
+      sections:[{properties:{page:{margin:{top:1418,bottom:1134,left:1701,right:1134}}},children:kids}]});
+    return Packer.toBlob(doc);
+  }
+  window.__buildReport=build;
+
+  function buildXlsx(){
+    const X=window.XLSX, SIT={ok:"analisado",falha:"falha (sem UR ou chuva)",reinicio:"aguardando reinício da FMA",ano:"ano descartado"};
+    const head=["Data","UR às 13 h (%)","Precipitação do dia (mm)","FMA","Classe – FMA original","Classe – FMA ajustada","Foco (sim/não)","Nº de focos","Período","Situação"];
+    const rows=[head];
+    for(const d of state.days){
+      const ok=!isNaN(d.fma);
+      rows.push([Math.round(d.t/DAY)+25569,isNaN(d.ur)?null:Math.round(d.ur*10)/10,isNaN(d.pp)?null:Math.round(d.pp*10)/10,ok?Math.round(d.fma*100)/100:null,
+        ok?CLASSES[classOf(d.fma,ORIGINAL)]:null,ok?CLASSES[classOf(d.fma,state.adj)]:null,d.fire?"sim":"não",d.focos,d.status==="ok"?(d.part||""):"",SIT[d.status]||""]);
+    }
+    const ws=X.utils.aoa_to_sheet(rows);
+    const rg=X.utils.decode_range(ws["!ref"]);
+    for(let r=1;r<=rg.e.r;r++){
+      const a=ws[X.utils.encode_cell({r,c:0})]; if(a){a.z="dd/mm/yyyy";}
+      const u=ws[X.utils.encode_cell({r,c:1})]; if(u&&u.t==="n") u.z="0.0";
+      const p=ws[X.utils.encode_cell({r,c:2})]; if(p&&p.t==="n") p.z="0.0";
+      const f=ws[X.utils.encode_cell({r,c:3})]; if(f&&f.t==="n") f.z="0.00";
+    }
+    ws["!cols"]=[{wch:12},{wch:15},{wch:26},{wch:10},{wch:22},{wch:22},{wch:14},{wch:11},{wch:12},{wch:28}];
+    ws["!autofilter"]={ref:ws["!ref"]};
+    ws["!freeze"]={xSplit:0,ySplit:1};
+    const thr=T=>[`≤ ${fmtT(T[0])}`,`${fmtT(T[0]+0.1)} a ${fmtT(T[1])}`,`${fmtT(T[1]+0.1)} a ${fmtT(T[2])}`,`${fmtT(T[2]+0.1)} a ${fmtT(T[3])}`,`> ${fmtT(T[3])}`];
+    const off=+$("tzOff").value;
+    const info=[["Classe de perigo","FMA original","FMA ajustada"],...CLASSES.map((c,i)=>[c,thr(ORIGINAL)[i],thr(state.adj)[i]]),[],
+      ["Parâmetros",""],
+      ["Dados meteorológicos",state.files.met.map(f=>f.name).join("; ")],
+      ["Ocorrências",state.files.foc.map(f=>f.name).join("; ")],
+      ["Fuso horário",`UTC${off<0?"−":"+"}${Math.abs(off)}`],
+      ["Umidade relativa","leitura das 13 h (horário local)"],
+      ["Precipitação","acumulado das 14 h do dia anterior às 13 h do dia (horário local)"],
+      ["Reduções por chuva",$("optRed").checked?"sim (Soares, 1972)":"não; só chuva > 12,9 mm zera a FMA"],
+      ["Dia com incêndio",`${Math.max(1,+$("optMin").value||1)} ou mais ocorrência(s)`],
+      ["Descarte de anos",`mais de ${$("optMaxGap").value}% dos dias sem FMA`],
+      ["Uso dos dados",state.Pv?"calibração (75%) + validação (25%)":"somente calibração (100% dos dados)"],
+      ["Gerado em",new Date().toLocaleString("pt-BR")]];
+    if(state.sample) info.push(["Atenção","dados de exemplo fictícios"]);
+    const ws2=X.utils.aoa_to_sheet(info); ws2["!cols"]=[{wch:24},{wch:60},{wch:18}];
+    const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,"Série diária"); X.utils.book_append_sheet(wb,ws2,"Escalas e parâmetros");
+    return X.write(wb,{type:"array",bookType:"xlsx"});
+  }
+  window.__buildXlsx=buildXlsx;
+  const bx=$("btnXlsx");
+  (async()=>{ for(let i=0;i<100&&!ready;i++) await new Promise(r=>setTimeout(r,100)); if(!dl) bx.disabled=true; })();
+  bx.addEventListener("click",async()=>{
+    if(!state.days||!state.O){ st.textContent="Carregue dados suficientes antes de baixar a planilha."; return; }
+    if(typeof XLSX==="undefined"){ st.textContent="Não foi possível carregar o gerador de planilhas. Recarregue a página e tente de novo."; return; }
+    if(!dl){ st.textContent=NO_DL; return; }
+    bx.disabled=true; st.textContent="Gerando planilha…";
+    try{
+      const buf=buildXlsx(); const d=new Date(), stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
+      await dl.save({filename:`serie_diaria_FMA_${stamp}.xlsx`,data:buf});
+      st.textContent="Planilha salva.";
+    }catch(e){
+      const c=e&&e.code;
+      st.textContent=c==="declined"?"Download cancelado.":c==="rate_limited"?"Já há um download aguardando confirmação.":(c==="unavailable"||c==="not_granted"||c==="capability_disabled"||c==="capability_removed")?NO_DL:"Não foi possível gerar a planilha"+(e&&e.message?`: ${e.message}`:".");
+    }finally{ bx.disabled=!dl; }
+  });
+
+  btn.addEventListener("click",async()=>{
+    if(!state.O||!state.Pc){ st.textContent="Carregue dados suficientes antes de gerar o relatório."; return; }
+    if(typeof docx==="undefined"||typeof Chart==="undefined"){ st.textContent="Não foi possível carregar o gerador de documentos. Recarregue a página e tente de novo."; return; }
+    if(!dl){ st.textContent=NO_DL; return; }
+    btn.disabled=true; st.textContent="Gerando relatório…";
+    try{
+      const blob=await build();
+      const d=new Date(), stamp=d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
+      await dl.save({filename:`relatorio_ajuste_FMA_${stamp}.docx`,data:blob});
+      st.textContent="Relatório salvo.";
+    }catch(e){
+      const c=e&&e.code;
+      st.textContent=c==="declined"?"Download cancelado.":c==="rate_limited"?"Já há um download aguardando confirmação.":(c==="unavailable"||c==="not_granted"||c==="capability_disabled"||c==="capability_removed")?NO_DL:"Não foi possível gerar o relatório"+(e&&e.message?`: ${e.message}`:".");
+    }finally{ btn.disabled=!dl; }
+  });
+})();
+</script>
+
+</body>
+</html>
