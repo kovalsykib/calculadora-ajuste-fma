@@ -66,6 +66,15 @@ section.step{background:var(--surface);border:1px solid var(--line);border-radiu
 .opts-grid>*{min-width:0}
 .opts-grid .narrow{width:90px}
 .opts-grid .row{flex-wrap:nowrap}
+.h-tip{display:flex;align-items:center;gap:8px}
+.tip{position:relative;display:inline-flex}
+.tip-btn{font:600 .75rem/1 var(--f-body);width:20px;height:20px;border-radius:50%;border:1.5px solid var(--muted);background:var(--surface);color:var(--muted);cursor:help;display:grid;place-items:center;padding:0}
+.tip-btn:hover,.tip-btn:focus-visible{border-color:var(--accent);color:var(--accent)}
+.tip-box{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);width:min(300px,78vw);background:var(--ink);color:var(--bg);font:400 .82rem/1.45 var(--f-body);padding:10px 12px;border-radius:6px;z-index:20;visibility:hidden;opacity:0;transition:opacity .12s;pointer-events:none;text-transform:none;letter-spacing:0}
+.tip:hover .tip-box,.tip-btn:focus+.tip-box{visibility:visible;opacity:1}
+@media (max-width:640px){.tip-box{left:0;transform:none}}
+.radius{display:grid;gap:8px;border-top:1px dashed var(--line);padding-top:10px}
+.radius .maps{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
 .val-cta{display:flex;gap:12px 24px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--sunk);border-radius:8px;padding:14px 16px}
 .val-cta b{color:var(--ink);font-family:var(--f-mono);font-weight:600}
 .report-box{display:flex;gap:16px 24px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
@@ -187,7 +196,7 @@ footer.foot{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line)
     <div class="grid2">
       <div class="drop" id="dropMet">
         <div class="drop-top">
-          <div><h3>Dados meteorológicos</h3><p class="muted" style="font-size:.88rem">Dados horários: data, hora, umidade relativa (%) e precipitação (mm), como os das estações automáticas do INMET. Dados diários não são aceitos. Pode adicionar vários arquivos, um por ano.</p></div>
+          <div><h3 class="h-tip">Dados meteorológicos <span class="tip"><button type="button" class="tip-btn" aria-describedby="tipMet" aria-label="Formato aceito">i</button><span class="tip-box" role="tooltip" id="tipMet">Pode enviar os arquivos CSV baixados do portal do INMET (dados horários de estação automática) do jeito que vieram, sem abrir nem editar. A calculadora reconhece o cabeçalho da estação, as colunas, a hora em UTC e os valores “null”. Pode enviar vários arquivos de uma vez (um por ano).</span></span></h3><p class="muted" style="font-size:.88rem">Dados horários: data, hora, umidade relativa (%) e precipitação (mm), como os das estações automáticas do INMET. Dados diários não são aceitos. Pode adicionar vários arquivos, um por ano.</p></div>
           <label class="btn small">Adicionar arquivos<input type="file" id="fileMet" accept=".csv,.txt,.xlsx,.xls,.ods" multiple></label>
         </div>
         <div class="file-name" id="nameMet">—</div>
@@ -195,7 +204,7 @@ footer.foot{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line)
           <label class="f">Data<select id="mDate"></select></label>
           <label class="f">Umidade relativa<select id="mUR"></select></label>
           <label class="f">Precipitação<select id="mPP"></select></label>
-          <label class="f">Hora (se horário)<select id="mHour"></select></label>
+          <label class="f">Hora<select id="mHour"></select></label>
         </div>
         <div class="opts" id="hourOpts">
           <div class="f" style="display:grid;gap:4px;font-size:.85rem;color:var(--muted);font-weight:600"><span>Leitura de UR usada</span><b style="color:var(--ink);font-family:var(--f-mono);font-weight:600">13 h (horário local)</b><input type="hidden" id="urHour" value="13"></div>
@@ -205,7 +214,7 @@ footer.foot{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line)
       </div>
       <div class="drop" id="dropFoc">
         <div class="drop-top">
-          <div><h3>Ocorrências de incêndio</h3><p class="muted" style="font-size:.88rem">Focos de calor (uma linha por foco, ex.: BDQueimadas) ou registros de ocorrência; também aceita uma linha por dia com a contagem. O BDQueimadas limita cada download a 366 dias: adicione todos os arquivos do período.</p></div>
+          <div><h3 class="h-tip">Ocorrências de incêndio <span class="tip"><button type="button" class="tip-btn" aria-describedby="tipFoc" aria-label="Formato aceito">i</button><span class="tip-box" role="tooltip" id="tipFoc">Pode enviar os arquivos CSV baixados do BDQueimadas (INPE) do jeito que vieram, sem abrir nem editar. A calculadora reconhece as colunas, a data-hora em UTC, o estado (para o fuso) e as coordenadas dos focos. Pode enviar vários arquivos de uma vez (o BDQueimadas limita cada download a 366 dias).</span></span></h3><p class="muted" style="font-size:.88rem">Focos de calor (uma linha por foco, ex.: BDQueimadas) ou registros de ocorrência; também aceita uma linha por dia com a contagem. O BDQueimadas limita cada download a 366 dias: adicione todos os arquivos do período.</p></div>
           <label class="btn small">Adicionar arquivos<input type="file" id="fileFoc" accept=".csv,.txt,.xlsx,.xls,.ods" multiple></label>
         </div>
         <div class="file-name" id="nameFoc">—</div>
@@ -214,6 +223,16 @@ footer.foot{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line)
           <label class="f">Nº de ocorrências (opcional)<select id="fCount"></select></label>
         </div>
         <label class="chk" style="display:flex;gap:8px;align-items:center;font-size:.88rem"><input type="checkbox" id="focUTC"> Horários em UTC (converter para o fuso local)</label>
+        <div class="radius">
+          <label class="chk" style="display:flex;gap:8px;align-items:center;font-size:.88rem"><input type="checkbox" id="optRadius" checked> Considerar só focos até <input type="number" id="radiusKm" class="narrow" value="50" min="1" max="100" step="1" style="width:72px;padding:3px 6px"> km da estação</label>
+          <div class="maps">
+            <label class="f">Latitude da estação<input type="number" id="stLat" step="0.0001" placeholder="ex.: -25,4486"></label>
+            <label class="f">Longitude da estação<input type="number" id="stLon" step="0.0001" placeholder="ex.: -49,2306"></label>
+            <label class="f">Coluna de latitude<select id="fLat"></select></label>
+            <label class="f">Coluna de longitude<select id="fLon"></select></label>
+          </div>
+          <p class="muted" style="font-size:.8rem" id="radiusNote">Uma estação sinótica representa uma área de até 100 km ao seu redor (OMM, Guia nº 8). As coordenadas da estação são lidas do arquivo do INMET.</p>
+        </div>
       </div>
     </div>
     <div class="opts-grid">
@@ -324,7 +343,8 @@ footer.foot{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line)
       <p><b>FMA.</b> Somatório diário de 100/H, com H a umidade relativa às 13 h. Com as reduções ativadas, a chuva do dia modifica o acumulado: até 2,4 mm não altera; 2,5 a 4,9 mm reduz o valor do dia anterior em 30%; 5,0 a 9,9 mm em 60%; 10,0 a 12,9 mm em 80% (somando 100/H do dia); acima de 12,9 mm a FMA é zerada e a soma recomeça no dia seguinte. Sem as reduções, apenas a chuva acima de 12,9 mm reinicia o cálculo.</p>
       <p><b>Falhas.</b> Não há preenchimento de falhas. Um dia sem UR das 13 h ou sem precipitação (vazio, “null” ou −9999) é desconsiderado, e a FMA dos dias seguintes também, porque o acumulado deixa de ser conhecido. O cálculo recomeça no primeiro dia com chuva acima de 12,9 mm, quando a FMA é zerada. O início da série segue a mesma regra: a FMA só começa a ser calculada após o primeiro dia com chuva acima de 12,9 mm. São aceitos apenas dados meteorológicos horários, porque a FMA usa a umidade relativa das 13 h (nunca a média diária) e a precipitação acumulada do dia, obtida pela soma das leituras horárias. A umidade relativa usada é exclusivamente a leitura das 13 h locais, sem substituição por média diária ou por outro horário. A precipitação do dia é a soma das leituras horárias das 14 h do dia anterior às 13 h do dia (horário local), coerente com a leitura de umidade das 13 h. Um dia com menos de 20 das 24 leituras horárias nessa janela (como o primeiro dia da série) é tratado como falha de precipitação. Arquivos do INMET (horários em UTC) e do BDQueimadas/INPE (data-hora em UTC) são reconhecidos e convertidos para o fuso horário local da região antes de agrupar por dia. O fuso é escolhido pelo estado informado no arquivo de focos (UTC−5 no Acre e no sudoeste do Amazonas; UTC−4 em AM, RR, RO, MT e MS; UTC−3 nos demais estados; UTC−2 em Fernando de Noronha) e pode ser alterado manualmente. Como os dados vêm em UTC, o horário de verão adotado até 2019 não interfere no cálculo.</p>
       <p><b>Descarte de anos.</b> Um ano com mais de 10% dos dias sem FMA (falhas e dias aguardando reinício; cerca de 37 dias) é descartado inteiro, porque lacunas longas, sobretudo na estação seca, distorcem a distribuição dos dias por classe. O limite pode ser alterado. Os dias com incêndio que caem em dias sem FMA ficam fora da análise. O período mínimo de 5 anos é contado sobre os dias com FMA calculada.</p>
-      <p><b>Dia com incêndio.</b> Dia com número de ocorrências (ou focos) igual ou maior que o limite escolhido, dentro do período dos dados meteorológicos.</p>
+      <p><b>Dia com incêndio.</b> Dia com número de ocorrências (ou focos) igual ou maior que o limite escolhido, dentro do período dos dados meteorológicos. Todo foco conta como ocorrência, qualquer que seja o satélite.</p>
+      <p><b>Raio em torno da estação.</b> Por padrão, só entram os focos a até 50 km da estação meteorológica (distância pela fórmula de haversine, com as coordenadas do cabeçalho do arquivo do INMET e as de cada foco). O raio pode ir até 100 km, limite da área que uma observação sinótica representa segundo a Organização Meteorológica Mundial (WMO, Guia nº 8, item 1.1.2). Raios menores reduzem o efeito da variação espacial da chuva, sobretudo a convectiva.</p>
       <p><b>Tabela de contingência.</b> Nulo e Pequeno indicam “sem incêndio”; Médio, Alto e Muito alto indicam “com incêndio”. a = previsto e ocorreu, b = previsto e não ocorreu, c = não previsto e ocorreu, d = não previsto e não ocorreu, N = a + b + c + d.</p>
       <p><b>Skill score e porcentagem de sucesso</b> (Sampaio e Soares, 2000; Nunes, Soares e Batista, 2007). G = a + d; H = [(a+b)(a+c) + (c+d)(b+d)] / N; SS = (G − H) / (N − H); PS = G / N × 100. SS e PS só mudam quando muda o limite entre Pequeno e Médio.</p>
       <p><b>Probabilidades de detecção</b> (Santos et al., 2021). POD = a / (a + c), a fração dos dias com incêndio que a escala previu. POFD = b / (b + d), a fração dos dias sem incêndio em que a escala indicou perigo (alarme falso).</p>
@@ -354,6 +374,7 @@ footer.foot{font-size:.85rem;color:var(--muted);border-top:1px solid var(--line)
         <li>SOARES, R. V. Índices de perigo de incêndio. <i>Floresta</i>, v. 3, n. 3, p. 19-40, 1972.</li>
         <li>TETTO, A. F. Comportamento histórico dos incêndios florestais na Fazenda Monte Alegre no período de 1965 a 2009. Tese (Doutorado) – UFPR, 2012.</li>
         <li>UNAL, I. Defining an optimal cut-point value in ROC analysis: an alternative approach. <i>Computational and Mathematical Methods in Medicine</i>, 2017, 3762651.</li>
+        <li>WMO – WORLD METEOROLOGICAL ORGANIZATION. <i>Guide to Instruments and Methods of Observation</i> (WMO-No. 8). Volume I. Genebra: WMO, 2018.</li>
         <li>WILKS, D. S. <i>Statistical methods in the atmospheric sciences</i>. 3. ed. Oxford: Elsevier, 2011.</li>
       </ul>
     </div>
@@ -477,10 +498,16 @@ function fireCounts(rows,map){
     let t=parseDateMs(r[map.date]); if(isNaN(t)) continue;
     if(map.utc){ const s=String(r[map.date]??""); const m=s.match(/[ T](\d{1,2}):(\d{2})/); if(m){ const off=map.off??-3; const loc=t+((+m[1]+off)*60+(+m[2]))*60000; t=Math.floor(loc/DAY)*DAY; } }
     const n=map.count?parseNum(r[map.count]):1; if(isNaN(n)||n<=0) continue;
+    if(map.radius){ const la=parseNum(r[map.lat]), lo=parseNum(r[map.lon]);
+      if(isNaN(la)||isNaN(lo)){ c.noCoord=(c.noCoord||0)+n; continue; }
+      if(distKm(map.st[0],map.st[1],la,lo)>map.radius){ c.outside=(c.outside||0)+n; continue; }
+      c.inside=(c.inside||0)+n; }
     c.set(t,(c.get(t)||0)+n);
   }
   return c;
 }
+function distKm(a1,o1,a2,o2){ const R=6371, r=Math.PI/180, da=(a2-a1)*r, dl=(o2-o1)*r;
+  const h=Math.sin(da/2)**2+Math.cos(a1*r)*Math.cos(a2*r)*Math.sin(dl/2)**2; return 2*R*Math.asin(Math.min(1,Math.sqrt(h))); }
 
 function yearQuality(days,maxPct){
   const by=new Map();
@@ -603,7 +630,7 @@ function sampleData(){
     let ur=Math.round(60+13*season+gauss()*11); ur=Math.min(98,Math.max(18,ur));
     const pr=0.22+0.16*season; let R=0;
     if(rnd()<pr) R=Math.round(-Math.log(1-rnd())*13*10)/10;
-    const longGap=d.getUTCFullYear()===2017&&doy>=160&&doy<200, miss13=rnd()<0.004;
+    const longGap=d.getUTCFullYear()===2017&&doy>=160&&doy<200, miss13=rnd()<0.0012;
     const rainH={15:Math.round(R*0.5*10)/10,16:Math.round(R*0.3*10)/10}; rainH[17]=Math.round((R-rainH[15]-rainH[16])*10)/10;
     for(let h=0;h<24;h++){
       const u=Math.round(Math.min(100,Math.max(8,ur+35*(shape(h)-s13))));
@@ -617,7 +644,9 @@ function sampleData(){
     if(pp>12.9)f=0; else if(pp<=2.4)f=prev+inc; else if(pp<=4.9)f=prev*.7+inc; else if(pp<=9.9)f=prev*.4+inc; else f=prev*.2+inc; prev=f;
     const pf=0.01+0.45/(1+Math.exp(-(f-24)/6));
     if(rnd()<pf){ const n=1+Math.floor(rnd()*4); const ymd=d.getUTCFullYear()+"/"+pad(d.getUTCMonth()+1)+"/"+pad(d.getUTCDate());
-      for(let i=0;i<n;i++) foc.push({DataHora:ymd+" 17:"+pad(Math.floor(rnd()*60))+":00",Satelite:rnd()<.5?"AQUA_M-T":"NOAA-20"}); }
+      for(let i=0;i<n;i++){ const ang=rnd()*2*Math.PI, km=45*Math.sqrt(rnd());
+        foc.push({DataHora:ymd+" 17:"+pad(Math.floor(rnd()*60))+":00",Satelite:rnd()<.5?"AQUA_M-T":"NOAA-20",Latitude:(-25+km*Math.sin(ang)/111).toFixed(5),Longitude:(-50+km*Math.cos(ang)/101).toFixed(5)}); }
+      if(rnd()<0.3) foc.push({DataHora:ymd+" 16:"+pad(Math.floor(rnd()*60))+":00",Satelite:"NOAA-20",Latitude:(-25+0.75+rnd()*0.3).toFixed(5),Longitude:(-50+0.2).toFixed(5)}); }
   }
   return {met,foc};
 }
@@ -681,6 +710,8 @@ function setMet(data,name){
   fillSelect($("mDate"),c,d); fillSelect($("mUR"),c,guess(c,[/^ur(_|\b)/,/umid.*rel|umidade relativa/,/umid/,/\brh\b|^rh/,/^ur/])); fillSelect($("mPP"),c,guess(c,[/precip/,/chuva/,/^pp/,/rain|prcp/])); fillSelect($("mHour"),c,h,true);
   const inmet=/codigo estacao|periodicidade|estacao:/.test(norm(data.preamble||""))||/hora medicao|utc/.test(norm(h||""));
   $("urHour").value=13; $("metUTC").checked=inmet;
+  const pre=String(data.preamble||""), mla=pre.match(/Latitude\s*:\s*(-?[\d.,]+)/i), mlo=pre.match(/Longitude\s*:\s*(-?[\d.,]+)/i);
+  if(mla&&mlo){ $("stLat").value=parseNum(mla[1]).toFixed(4); $("stLon").value=parseNum(mlo[1]).toFixed(4); }
   if(prev.d&&c.includes(prev.d)) $("mDate").value=prev.d; if(prev.u&&c.includes(prev.u)) $("mUR").value=prev.u; if(prev.p&&c.includes(prev.p)) $("mPP").value=prev.p; if(prev.h&&c.includes(prev.h)) $("mHour").value=prev.h;
 }
 function setFoc(data,name){
@@ -689,6 +720,7 @@ function setFoc(data,name){
   const c=data.cols;
   fillSelect($("fDate"),c,guess(c,[/^datahora$/,/data.?hora/,/acq_date/,/^data$/,/date|data/]));
   fillSelect($("fCount"),c,guess(c,[/^(n|num|qtd|numero)?_?(focos|ocorrencias|incendios)$/,/count/]),true);
+  fillSelect($("fLat"),c,guess(c,[/^latitude$/,/^lat$/,/lat/]),true); fillSelect($("fLon"),c,guess(c,[/^longitude$/,/^lon$/,/^long$/,/lon/]),true);
   state.tzNote="";
   const uf=guess(c,[/^estado$/,/^uf$/,/estado|^sigla_?uf/]);
   if(uf){ const cnt={}; data.rows.forEach(r=>{const k=norm(r[uf]).trim(); if(k) cnt[k]=(cnt[k]||0)+1;}); const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
@@ -764,12 +796,12 @@ for(const [id,kind] of [["dropMet","met"],["dropFoc","foc"]]){
 function loadSample(){
   const s=sampleData();
   state.sample=true;
-  state.files={met:[{name:"exemplo_INMET_horario.csv",data:{cols:["Data Medicao","Hora Medicao","PRECIPITACAO TOTAL, HORARIO(mm)","UMIDADE RELATIVA DO AR, HORARIA(%)"],rows:s.met,preamble:"Nome: EXEMPLO\nCodigo Estacao: X000\nPeriodicidade da Medicao: Horaria"}}],foc:[{name:"exemplo_bdqueimadas.csv",data:{cols:["DataHora","Satelite"],rows:s.foc}}]};
+  state.files={met:[{name:"exemplo_INMET_horario.csv",data:{cols:["Data Medicao","Hora Medicao","PRECIPITACAO TOTAL, HORARIO(mm)","UMIDADE RELATIVA DO AR, HORARIA(%)"],rows:s.met,preamble:"Nome: EXEMPLO\nCodigo Estacao: X000\nLatitude: -25.0000\nLongitude: -50.0000\nPeriodicidade da Medicao: Horaria"}}],foc:[{name:"exemplo_bdqueimadas.csv",data:{cols:["DataHora","Satelite","Latitude","Longitude"],rows:s.foc}}]};
   applyFiles("met"); applyFiles("foc");
   $("tzOff").value="-3";
   state.sample=true; $("sampleBadge").hidden=false; state.showVal=false; run(true);
 }
-["mDate","mUR","mPP","mHour","fDate","fCount","urHour","metUTC","focUTC","tzOff","optRed","optMin","optMaxGap"].forEach(id=>$(id).addEventListener("change",()=>run(true)));
+["mDate","mUR","mPP","mHour","fDate","fCount","urHour","metUTC","focUTC","tzOff","optRed","optMin","optMaxGap","optRadius","radiusKm","stLat","stLon","fLat","fLon"].forEach(id=>$(id).addEventListener("change",()=>run(true)));
 $("optMode").addEventListener("change",()=>{ $("optKeepNulo").checked=mode()==="peak"; recalcAuto(); });
 ["optCut","optKeepNulo"].forEach(id=>$(id).addEventListener("change",recalcAuto));
 function recalcAuto(){ if(!state.Pc) return; const O=evaluate(state.Pc,ORIGINAL,mode()); if(O.p1&&O.p2&&!$("optCut").checked){state.adj=[...ORIGINAL];state.autoInfo=null;$("autoNote").textContent="A escala original já atende às premissas.";} else doAuto(); renderScales(); renderResults(); }
@@ -861,7 +893,12 @@ function run(reAuto){
   const maxPct=Math.min(100,Math.max(0,parseNum($("optMaxGap").value)));
   const yq=yearQuality(daily.days,isNaN(maxPct)?10:maxPct), excl=new Set(yq.filter(y=>y.excluded).map(y=>y.year));
   daily.days.forEach(d=>{ if(excl.has(d.year)&&d.status==="ok") d.status="ano"; });
-  const fc=fireCounts(state.foc.rows,{date:$("fDate").value,count:$("fCount").value,utc:$("focUTC").checked,off:+$("tzOff").value});
+  let rad=Math.min(100,Math.max(1,parseNum($("radiusKm").value)||50)); $("radiusKm").value=rad;
+  const stLa=parseNum($("stLat").value), stLo=parseNum($("stLon").value);
+  const radOn=$("optRadius").checked, radReady=radOn&&!isNaN(stLa)&&!isNaN(stLo)&&$("fLat").value&&$("fLon").value;
+  const fc=fireCounts(state.foc.rows,{date:$("fDate").value,count:$("fCount").value,utc:$("focUTC").checked,off:+$("tzOff").value,radius:radReady?rad:0,st:[stLa,stLo],lat:$("fLat").value,lon:$("fLon").value});
+  state.radius=radReady?{km:rad,lat:stLa,lon:stLo,inside:fc.inside||0,outside:fc.outside||0,noCoord:fc.noCoord||0}:null;
+  $("radiusNote").textContent=radReady?`${(fc.inside||0).toLocaleString("pt-BR")} focos dentro de ${rad} km da estação; ${(fc.outside||0).toLocaleString("pt-BR")} fora do raio foram descartados${fc.noCoord?`; ${fc.noCoord} sem coordenadas também`:""}. Uma estação sinótica representa até 100 km ao seu redor (OMM, Guia nº 8).`:(radOn?"Para aplicar o raio, informe as coordenadas da estação e as colunas de latitude e longitude dos focos. Enquanto isso, todos os focos do arquivo são considerados.":"Raio desativado: todos os focos do arquivo são considerados. Uma estação sinótica representa até 100 km ao seu redor (OMM, Guia nº 8).");
   const minF=Math.max(1,+$("optMin").value||1);
   const t0=daily.days[0].t,t1=daily.days.at(-1).t;
   let inPeriod=0,outPeriod=0; for(const [t,n] of fc){ if(t>=t0&&t<=t1) inPeriod+=n; else outPeriod+=n; }
@@ -890,8 +927,9 @@ function run(reAuto){
   if(!state.Pv||!state.showVal) state.view="cal";
   const nFire=use.filter(d=>d.fire).length, lost=daily.days.length-use.length;
   state.counts={inPeriod,nFire,lost,use:use.length,total:daily.days.length,hourly:daily.hourly};
-  $("dataSummary").innerHTML=`Período <b>${dBR(daily.days[0].key)}</b> a <b>${dBR(daily.days.at(-1).key)}</b> · <b>${daily.days.length.toLocaleString("pt-BR")}</b> dias · <b>${use.length.toLocaleString("pt-BR")}</b> com FMA calculada${lost?` · <b>${lost.toLocaleString("pt-BR")}</b> desconsiderados`:""} · <b>${inPeriod.toLocaleString("pt-BR")}</b> ocorrências no período · <b>${nFire.toLocaleString("pt-BR")}</b> dias com incêndio analisados (${fmt(nFire/use.length*100,1)}%)`+(daily.hourly?` · dados horários agregados (UR das ${$("urHour").value} h${$("metUTC").checked?" locais, UTC"+(+$("tzOff").value<0?"−":"+")+Math.abs(+$("tzOff").value):""})`:"")+(state.tzNote&&($("metUTC").checked||$("focUTC").checked)?`<br>${state.tzNote}`:"");
+  $("dataSummary").innerHTML=`Período <b>${dBR(daily.days[0].key)}</b> a <b>${dBR(daily.days.at(-1).key)}</b> · <b>${daily.days.length.toLocaleString("pt-BR")}</b> dias · <b>${use.length.toLocaleString("pt-BR")}</b> com FMA calculada${lost?` · <b>${lost.toLocaleString("pt-BR")}</b> desconsiderados`:""} · <b>${inPeriod.toLocaleString("pt-BR")}</b> ocorrências no período${state.radius?` (até ${state.radius.km} km da estação)`:""} · <b>${nFire.toLocaleString("pt-BR")}</b> dias com incêndio analisados (${fmt(nFire/use.length*100,1)}%)`+(daily.hourly?` · dados horários agregados (UR das ${$("urHour").value} h${$("metUTC").checked?" locais, UTC"+(+$("tzOff").value<0?"−":"+")+Math.abs(+$("tzOff").value):""})`:"")+(state.tzNote&&($("metUTC").checked||$("focUTC").checked)?`<br>${state.tzNote}`:"");
   const warn=[];
+  if(radOn&&!radReady) warn.push("O raio em torno da estação não foi aplicado porque faltam as coordenadas da estação ou as colunas de latitude e longitude dos focos. Todos os focos do arquivo foram considerados.");
   if(excl.size) warn.push(`${excl.size===1?"Ano descartado":"Anos descartados"} por excesso de dias sem FMA (mais de ${fmt(isNaN(maxPct)?10:maxPct,0)}%): ${[...excl].join(", ")}. Veja a qualidade da série por ano.`);
   const lostF=yq.reduce((a,y)=>a+y.firesLost,0); if(lostF) warn.push(`${lostF} dia(s) com incêndio caíram em dias sem FMA calculada e ficaram fora da análise.`);
   if(outPeriod) warn.push(`${outPeriod.toLocaleString("pt-BR")} ocorrências estão fora do período dos dados meteorológicos e foram ignoradas.`);
@@ -1093,7 +1131,7 @@ loadSample();
     const fm=state.files.met.map(f=>f.name).join("; "), ff=state.files.foc.map(f=>f.name).join("; ");
     kids.push(P([B("Dados meteorológicos: "),fm||"—"]));
     kids.push(P([B("Ocorrências de incêndio: "),ff||"—"]));
-    kids.push(P(`A série meteorológica abrange ${C.total?.toLocaleString("pt-BR")} dias, de ${dBR(state.days[0].key)} a ${dBR(state.days.at(-1).key)}. Desses, ${C.use?.toLocaleString("pt-BR")} dias tiveram a FMA calculada e ${C.lost?.toLocaleString("pt-BR")} foram desconsiderados por falhas, por aguardarem o reinício do cálculo ou por pertencerem a anos descartados. Foram registradas ${C.inPeriod?.toLocaleString("pt-BR")} ocorrências no período, resultando em ${C.nFire?.toLocaleString("pt-BR")} dias com incêndio analisados. Considerou-se dia com incêndio aquele com pelo menos ${Math.max(1,+$("optMin").value||1)} ocorrência(s).`));
+    kids.push(P(`A série meteorológica abrange ${C.total?.toLocaleString("pt-BR")} dias, de ${dBR(state.days[0].key)} a ${dBR(state.days.at(-1).key)}. Desses, ${C.use?.toLocaleString("pt-BR")} dias tiveram a FMA calculada e ${C.lost?.toLocaleString("pt-BR")} foram desconsiderados por falhas, por aguardarem o reinício do cálculo ou por pertencerem a anos descartados. Foram registradas ${C.inPeriod?.toLocaleString("pt-BR")} ocorrências no período, resultando em ${C.nFire?.toLocaleString("pt-BR")} dias com incêndio analisados. Considerou-se dia com incêndio aquele com pelo menos ${Math.max(1,+$("optMin").value||1)} ocorrência(s), independentemente do satélite.`+(state.radius?` Foram considerados apenas os focos a até ${state.radius.km} km da estação meteorológica (${n2(state.radius.lat,4)}; ${n2(state.radius.lon,4)}): ${state.radius.inside.toLocaleString("pt-BR")} focos dentro do raio e ${state.radius.outside.toLocaleString("pt-BR")} descartados por estarem fora dele. O raio respeita o limite de 100 km de representatividade de uma observação sinótica (WMO, 2018).`:" Foram considerados todos os focos dos arquivos carregados, sem restrição de distância à estação.")));
     kids.push(P(`Fuso horário adotado: ${tz}. ${$("metUTC").checked?"Os horários dos dados meteorológicos, publicados em UTC, foram convertidos para o horário local; a umidade relativa usada é a leitura das 13 h locais e a precipitação do dia é o acumulado das 14 h do dia anterior às 13 h locais. ":""}${$("focUTC").checked?"Os horários das ocorrências, publicados em UTC, foram convertidos para o horário local antes do agrupamento por dia. ":""}${state.tzNote||""}`));
     if(state.yq?.length){
       kids.push(H2("Qualidade da série por ano"));
@@ -1161,6 +1199,7 @@ loadSample();
      "SOARES, R. V. Índices de perigo de incêndio. Floresta, v. 3, n. 3, p. 19-40, 1972.",
      "TETTO, A. F. Comportamento histórico dos incêndios florestais na Fazenda Monte Alegre no período de 1965 a 2009. Tese (Doutorado) – Universidade Federal do Paraná, 2012.",
      "UNAL, I. Defining an optimal cut-point value in ROC analysis: an alternative approach. Computational and Mathematical Methods in Medicine, 2017, 3762651.",
+     "WMO – WORLD METEOROLOGICAL ORGANIZATION. Guide to Instruments and Methods of Observation (WMO-No. 8). Volume I. Genebra: WMO, 2018.",
      "WILKS, D. S. Statistical methods in the atmospheric sciences. 3. ed. Oxford: Elsevier, 2011."].forEach(r=>kids.push(new Paragraph({spacing:{after:100},children:[new TextRun({text:r,font:FONT,size:20})]})));
 
     const doc=new Document({creator:"Calculadora de Ajuste da FMA",title:"Avaliação e ajuste da FMA",
@@ -1200,7 +1239,8 @@ loadSample();
       ["Umidade relativa","leitura das 13 h (horário local)"],
       ["Precipitação","acumulado das 14 h do dia anterior às 13 h do dia (horário local)"],
       ["Reduções por chuva",$("optRed").checked?"sim (Soares, 1972)":"não; só chuva > 12,9 mm zera a FMA"],
-      ["Dia com incêndio",`${Math.max(1,+$("optMin").value||1)} ou mais ocorrência(s)`],
+      ["Dia com incêndio",`${Math.max(1,+$("optMin").value||1)} ou mais ocorrência(s), qualquer satélite`],
+      ["Raio em torno da estação",state.radius?`${state.radius.km} km (estação em ${state.radius.lat.toFixed(4)}; ${state.radius.lon.toFixed(4)}); ${state.radius.inside} focos dentro, ${state.radius.outside} fora`:"não aplicado (todos os focos)"],
       ["Descarte de anos",`mais de ${$("optMaxGap").value}% dos dias sem FMA`],
       ["Uso dos dados",state.Pv?"calibração (75%) + validação (25%)":"somente calibração (100% dos dados)"],
       ["Gerado em",new Date().toLocaleString("pt-BR")]];
